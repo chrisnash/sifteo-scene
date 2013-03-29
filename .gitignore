@@ -11,3 +11,10 @@
 *.lai
 *.la
 *.a
+
+# Sifteo
+*.d
+*.s
+*.elf
+assets.gen.*
+
