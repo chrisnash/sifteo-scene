@@ -8,6 +8,10 @@
 #ifndef SCENE_RUNNER_H_
 #define SCENE_RUNNER_H_
 
+#include <sifteo.h>
+#include "element.h"
+#include "defines.h"
+
 namespace Scene
 {
 	class Runner

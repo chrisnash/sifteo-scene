@@ -19,6 +19,9 @@ namespace Scene
 	const uint8_t NO_MODE		= 0x1F;
 	const uint8_t STATE_MASK	= (ATTACHED | MODE_MASK);
 
+	const uint8_t NO_UPDATE		= 0x00;
+	const uint8_t FULL_UPDATE	= 0xFF;
+
 	void initialize();
 
 	// API to build a scene directly into the buffer
@@ -30,6 +33,12 @@ namespace Scene
 	void setScene(Element *scene, uint16_t count);
 
 	int32_t execute();
+
+	// perhaps not publicly exported
+	uint8_t updateCount();
+	int32_t doUpdate(Element *element, uint8_t frames=0);
+	bool doRedraw(Element *element);
+	bool doRepaint();
 }
 
 #endif /* SCENE_H_ */

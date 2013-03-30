@@ -5,6 +5,7 @@
  *      Author: chrisnash
  */
 #include <scene.h>
+#include "../headers/defines.h"
 
 using namespace Sifteo;
 

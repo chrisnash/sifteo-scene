@@ -1,34 +1,8 @@
+#include <sifteo.h>
 #include "runner.h"
 
-void Runner::copyScene(Element *scene, uint16_t size)
-{
-	ASSERT(scene != 0);
-	ASSERT(size < SCENE_MAX_SIZE);
+using namespace Scene;
 
-	Sifteo::memcpy(sceneBuffer, scene, size*sizeof(Element));
-	setScene(sceneBuffer, size);
-}
-
-void Runner::setScene(Element *scene, uint16_t size)
-{
-	ASSERT(scene != 0);
-	ASSERT(size < SCENE_MAX_SIZE);
-
-	sceneData = scene;
-	sceneSize = scene;
-	initialDraw = BitArray<SCENE_MAX_SIZE>(0, sceneSize);
-
-	for(uint16_t i = 0; (i<sceneSize); i++)
-	{
-		Element *element = sceneData + i;
-		if(element->mode & Scene::HIDE)
-		{
-			element->mode &= ~Scene::HIDE;
-			initialDraw.clear(i);
-		}
-	}
-	redraw = intiialDraw;
-}
 
 int32_t Runner::execute()
 {
@@ -61,7 +35,7 @@ int32_t Runner::execute()
 		}
 
 		// redraw loop. Note redraw and repaint events may force graphics initialization
-		int index;
+		unsigned index;
 		while(redraw.clearFirst(index))
 		{
 			Element *element = sceneData + index;
