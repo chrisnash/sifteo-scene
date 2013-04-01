@@ -80,10 +80,14 @@ void main()
 	Scene::Element *p = Scene::beginScene();
 	LOG("Initial scene pointer %p\n", p);
 
-	// build the sully element
-	bzero(*p);					// type 0 update 0 mode 0 cube 0
-	p->mode |= Scene::ATTACHED;	// can't draw tiles unless the cube is attached
-	p++;						// next element
+	// build three sully elements
+	for(int i=0; i<3; i++)
+	{
+		bzero(*p);					// type 0 update 0 mode 0 cube 0
+		p->cube = i;
+		p->mode |= Scene::ATTACHED;	// can't draw tiles unless the cube is attached
+		p++;						// next element
+	}
 
 	Scene::endScene(p);			// complete the scene build
 
