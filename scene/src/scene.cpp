@@ -36,9 +36,28 @@ namespace Scene
 	ElementHandler *elementHandler = 0;
 	LoadingScreen *loadingScreen = 0;
 
+	bool fullRefresh = true;
+
+	// Event handler
+	class EventHandler
+	{
+	public:
+		void onCubeRefresh(unsigned cubeID)
+		{
+			fullRefresh = true;
+		}
+
+		void initialize()
+		{
+			Sifteo::Events::cubeRefresh.set(&EventHandler::onCubeRefresh, this);
+		}
+	}
+	eventHandler;
+
 	void initialize()
 	{
-		for(uint8_t i=0; i<CUBE_ALLOCATION; i++) currentModes[i] = NO_MODE;
+		fullRefresh = true;
+		eventHandler.initialize();
 	}
 
 	void setModeHandler(ModeHandler *p)
@@ -106,6 +125,13 @@ namespace Scene
 		ASSERT(modeHandler != 0);
 		ASSERT(elementHandler != 0);
 		ASSERT(loadingScreen != 0);
+
+		if(fullRefresh)
+		{
+			redraw = initialDraw;
+			for(uint8_t i=0; i<CUBE_ALLOCATION; i++) currentModes[i] = NO_MODE;
+			fullRefresh = false;
+		}
 
 		// the redraw loop goes thru all elements whose redraw flag is set.
 		// if the mode matches, then that element can be drawn. Otherwise we need to consider
