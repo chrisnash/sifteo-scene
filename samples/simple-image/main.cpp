@@ -31,7 +31,15 @@ public:
 	}
 	void switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v)
 	{
-		v.initMode(BG0);
+		switch(mode)
+		{
+		case 0:
+			v.initMode(BG0);
+			break;
+		case 1:
+			v.initMode(FB128, 112, 16);		// just the bottom 16 rows of the display
+			break;
+		}
 	}
 };
 
@@ -40,7 +48,17 @@ class SimpleElementHandler : public Scene::ElementHandler
 public:
 	void drawElement(Scene::Element *el, Sifteo::VideoBuffer &v)
 	{
-		v.bg0.image(vec(0,0), Sully);
+		switch(el->type)
+		{
+		case 0:
+			v.bg0.image(vec(0,0), Sully);
+			break;
+		case 1:
+			v.colormap[0] = RGB565::fromRGB(0x000080);
+			v.colormap[1] = RGB565::fromRGB(0xFFFFFF);		// white on dark blue
+			v.fb128.fill(vec(0,0), vec(128,16), 0);			// fill it
+			break;
+		}
 	}
 	int32_t updateElement(Scene::Element *el)
 	{
@@ -80,13 +98,22 @@ void main()
 	Scene::Element *p = Scene::beginScene();
 	LOG("Initial scene pointer %p\n", p);
 
+	const char *text_messages[] = {"Cube 1", "Cube 2", "Cube 3"};
+
 	// build three sully elements
 	for(int i=0; i<3; i++)
 	{
 		bzero(*p);					// type 0 update 0 mode 0 cube 0
-		p->cube = i;
 		p->mode |= Scene::ATTACHED;	// can't draw tiles unless the cube is attached
+		p->cube = i;
 		p++;						// next element
+
+		bzero(*p);
+		p->type = 1;				// type 1 is text
+		p->mode = 1;				// mode 1 is text at the bottom
+		p->cube = i;
+		p->object = (void *)text_messages[i];
+		p++;
 	}
 
 	Scene::endScene(p);			// complete the scene build

@@ -123,6 +123,7 @@ namespace Scene
 		// for at least one paint cycle
 		do
 		{
+			BitArray<CUBE_ALLOCATION> dirty(0,0);		// mark cubes that are drawn on, you can't mode switch until they paint
 			BitArray<SCENE_MAX_SIZE> todo = redraw;
 			redraw.clear();
 
@@ -141,7 +142,7 @@ namespace Scene
 				uint8_t currentMode = currentModes[cube];
 				uint8_t elementMode = element->mode;
 
-				if((currentMode & MODE_MASK) != (elementMode & MODE_MASK))
+				if( ((currentMode & MODE_MASK) != (elementMode & MODE_MASK)) && !dirty.test(cube))
 				{
 					// in the wrong mode, so need to do a mode switch
 					// but first you need to check assets for this mode
@@ -187,6 +188,7 @@ namespace Scene
 				{
 					LOG("SCENE: Draw element %d\n", i);
 					elementHandler->drawElement(element, vid[cube]);
+					dirty.mark(cube);
 				}
 				else
 				{
