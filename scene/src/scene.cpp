@@ -92,6 +92,15 @@ namespace Scene
 
 			return true;
 		}
+
+		uint8_t physical(uint8_t logical)
+		{
+			return toPhysical[logical];
+		}
+		uint8_t logical(uint8_t physical)
+		{
+			return toLogical[physical];
+		}
 	}
 	cubeMapping;
 
@@ -251,7 +260,12 @@ namespace Scene
 			{
 				Element *element = sceneData + i;
 				uint8_t cube = element->cube;
-				if(cubesLoading.test(cube))
+				uint8_t physical = cubeMapping.physical(cube);
+				if(physical == CubeID::UNDEFINED)
+				{
+					continue;		// you can't see this cube, so don't draw it
+				}
+				if(cubesLoading.test(physical))
 				{
 					redraw.mark(i);	// we can't do this object yet
 					continue;		// skip any cubes in download mode
@@ -269,7 +283,7 @@ namespace Scene
 					bool alreadyInstalled = true;
 					for(AssetConfigurationNode node : *pAssets)
 					{
-						if(!node.group()->isInstalled(cube))
+						if(!node.group()->isInstalled(physical))
 						{
 							alreadyInstalled = false;
 							break;
@@ -284,22 +298,22 @@ namespace Scene
 							assetLoader.init();
 						}
 						LOG("SCENE: Beginning download to cube %d\n", cube);
-						assetLoader.start(*pAssets, CubeSet(cube));
-						cubesLoading.mark(cube);
+						assetLoader.start(*pAssets, CubeSet(physical));
+						cubesLoading.mark(physical);
 						currentMode = currentModes[cube] = NO_MODE;
-						CubeID(cube).detachVideoBuffer();
+						CubeID(physical).detachVideoBuffer();
 						loadingScreen->init(cube, vid[cube]);
-						vid[cube].attach(cube);
+						vid[cube].attach(physical);
 						loadingScreen->onAttach(cube, vid[cube]);
 					}
 					else
 					{
 						// ok to perform the mode switch, and may as well attach right now
 						LOG("SCENE: Mode switch of cube %d\n", cube);
-						CubeID(cube).detachVideoBuffer();
+						CubeID(physical).detachVideoBuffer();
 						modeHandler->switchMode(cube, elementMode & MODE_MASK, vid[cube]);
 						currentMode = currentModes[cube] = elementMode & MODE_MASK;
-						vid[cube].attach(cube);
+						vid[cube].attach(physical);
 					}
 				}
 
@@ -322,7 +336,8 @@ namespace Scene
 			for(uint8_t i : cubesLoading)
 			{
 				float progress = assetLoader.cubeProgress(i);
-				loadingScreen->update(i, progress, vid[i]);
+				uint8_t logical = cubeMapping.logical(i);
+				loadingScreen->update(logical, progress, vid[logical]);
 				if(assetLoader.isComplete(i))
 				{
 					LOG("SCENE: Completed download to cube %d\n", i);
