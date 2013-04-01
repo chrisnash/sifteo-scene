@@ -16,5 +16,9 @@
 #define	SCENE_MAX_SIZE	256
 #endif
 
+#ifndef ASSET_CAPACITY
+#define	ASSET_CAPACITY	4
+#endif
+
 
 #endif /* DEFINES_H_ */

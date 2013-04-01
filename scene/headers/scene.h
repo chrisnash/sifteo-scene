@@ -8,7 +8,12 @@
 #ifndef SCENE_SCENE_H_
 #define SCENE_SCENE_H_
 
+#include <sifteo.h>
 #include "element.h"
+#include "defines.h"
+#include "modehandler.h"
+#include "elementhandler.h"
+#include "loadingscreen.h"
 
 namespace Scene
 {
@@ -24,6 +29,10 @@ namespace Scene
 
 	void initialize();
 
+	void setModeHandler(ModeHandler *p);
+	void setElementHandler(ElementHandler *p);
+	void setLoadingScreen(LoadingScreen *p);
+
 	// API to build a scene directly into the buffer
 	Element *beginScene();
 	void endScene(Element *);
@@ -38,7 +47,7 @@ namespace Scene
 	uint8_t updateCount();
 	int32_t doUpdate(Element *element, uint8_t frames=0);
 	bool doRedraw(Element *element);
-	bool doRepaint();
+
 }
 
 #endif /* SCENE_H_ */

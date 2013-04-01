@@ -17,4 +17,5 @@
 *.s
 *.elf
 assets.gen.*
+assets.html
 
