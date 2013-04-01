@@ -38,6 +38,63 @@ namespace Scene
 
 	bool fullRefresh = true;
 
+	CubeSet attentionCubes;
+
+	class CubeMapping
+	{
+		uint8_t toPhysical[CUBE_ALLOCATION];
+		uint8_t toLogical[CUBE_ALLOCATION];
+	public:
+		void initialize()
+		{
+			for(uint8_t i=0; i<CUBE_ALLOCATION; i++)
+			{
+				toPhysical[i] = CubeID::UNDEFINED;
+				toLogical[i] = CubeID::UNDEFINED;
+			}
+		}
+
+		// allocate a physical cube to a logical slot
+		// return true if anything changed
+		bool allocate(uint8_t physical)
+		{
+			uint8_t logical = toLogical[physical];
+			if(logical != CubeID::UNDEFINED) return false;
+			logical = 0;
+			while(toPhysical[logical] != CubeID::UNDEFINED) logical++;
+			toPhysical[logical] = physical;
+			toLogical[physical] = logical;
+			return true;
+		}
+
+		// deallocate a physical cube
+		// return true if anything changed
+		bool deallocate(uint8_t physical)
+		{
+			uint8_t logical = toLogical[physical];
+			if(logical == CubeID::UNDEFINED) return false;
+			toLogical[physical] = CubeID::UNDEFINED;
+			toPhysical[logical] = CubeID::UNDEFINED;
+
+			// bubble down allocated cubes to fill any spaces
+			// basically keep moving the highest assigned logical cube to the lowest unassigned logical cube
+			uint8_t highest = CUBE_ALLOCATION - 1;
+			while((highest>logical) && (toPhysical[highest] == CubeID::UNDEFINED)) highest--;
+			if(highest > logical)
+			{
+				physical = toPhysical[highest];
+				// bind physical to logical, bind highest to nowhere
+				toLogical[physical] = logical;
+				toPhysical[logical] = physical;
+
+				toPhysical[highest] = CubeID::UNDEFINED;
+			}
+
+			return true;
+		}
+	}
+	cubeMapping;
+
 	// Event handler
 	class EventHandler
 	{
@@ -46,10 +103,20 @@ namespace Scene
 		{
 			fullRefresh = true;
 		}
+		void onCubeChange(unsigned cubeID)
+		{
+			attentionCubes.mark(cubeID);
+		}
 
 		void initialize()
 		{
 			Sifteo::Events::cubeRefresh.set(&EventHandler::onCubeRefresh, this);
+
+			cubeMapping.initialize();
+			attentionCubes = CubeSet::connected();
+
+			Sifteo::Events::cubeConnect.set(&EventHandler::onCubeChange, this);
+			Sifteo::Events::cubeDisconnect.set(&EventHandler::onCubeChange, this);
 		}
 	}
 	eventHandler;
@@ -125,6 +192,32 @@ namespace Scene
 		ASSERT(modeHandler != 0);
 		ASSERT(elementHandler != 0);
 		ASSERT(loadingScreen != 0);
+
+		if(!attentionCubes.empty())
+		{
+			CubeSet current = CubeSet::connected();
+			unsigned i;
+			while(attentionCubes.clearFirst(i))
+			{
+				if(current.test(i))
+				{
+					// cube is connected
+					if(cubeMapping.allocate(i))
+					{
+						fullRefresh = true;
+					}
+				}
+				else
+				{
+					// cube is not connected
+					CubeID(i).detachVideoBuffer();
+					if(cubeMapping.deallocate(i))
+					{
+						fullRefresh = true;
+					}
+				}
+			}
+		}
 
 		if(fullRefresh)
 		{
