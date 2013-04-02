@@ -14,6 +14,7 @@
 #include "modehandler.h"
 #include "elementhandler.h"
 #include "loadingscreen.h"
+#include "motionmapper.h"
 
 namespace Scene
 {
@@ -32,6 +33,7 @@ namespace Scene
 	void setModeHandler(ModeHandler *p);
 	void setElementHandler(ElementHandler *p);
 	void setLoadingScreen(LoadingScreen *p);
+	void setMotionMapper(MotionMapper *p);
 
 	// API to build a scene directly into the buffer
 	Element *beginScene();

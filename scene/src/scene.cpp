@@ -40,6 +40,14 @@ namespace Scene
 
 	CubeSet attentionCubes;
 
+	class NoMotion : public MotionMapper
+	{
+		void attachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
+	}
+	noMotion;
+
+	MotionMapper *motionMapper = &noMotion;
+
 	class CubeMapping
 	{
 		uint8_t toPhysical[CUBE_ALLOCATION];
@@ -64,6 +72,7 @@ namespace Scene
 			while(toPhysical[logical] != CubeID::UNDEFINED) logical++;
 			toPhysical[logical] = physical;
 			toLogical[physical] = logical;
+			motionMapper->attachMotion(logical, CubeID(physical));
 			return true;
 		}
 
@@ -75,6 +84,7 @@ namespace Scene
 			if(logical == CubeID::UNDEFINED) return false;
 			toLogical[physical] = CubeID::UNDEFINED;
 			toPhysical[logical] = CubeID::UNDEFINED;
+			CubeID(physical).detachMotionBuffer();
 
 			// bubble down allocated cubes to fill any spaces
 			// basically keep moving the highest assigned logical cube to the lowest unassigned logical cube
@@ -83,11 +93,13 @@ namespace Scene
 			if(highest > logical)
 			{
 				physical = toPhysical[highest];
+				toPhysical[highest] = CubeID::UNDEFINED;
+				CubeID(physical).detachMotionBuffer();
+
 				// bind physical to logical, bind highest to nowhere
 				toLogical[physical] = logical;
 				toPhysical[logical] = physical;
-
-				toPhysical[highest] = CubeID::UNDEFINED;
+				motionMapper->attachMotion(logical, CubeID(physical));
 			}
 
 			return true;
@@ -100,6 +112,20 @@ namespace Scene
 		uint8_t logical(uint8_t physical)
 		{
 			return toLogical[physical];
+		}
+
+		void reattachMotion()
+		{
+			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
+			{
+				uint8_t physical = toPhysical[logical];
+				if(physical != CubeID::UNDEFINED)
+				{
+					CubeID cube(physical);
+					cube.detachMotionBuffer();
+					motionMapper->attachMotion(logical, physical);
+				}
+			}
 		}
 	}
 	cubeMapping;
@@ -149,6 +175,12 @@ namespace Scene
 	void setLoadingScreen(LoadingScreen *p)
 	{
 		loadingScreen = p;
+	}
+
+	void setMotionMapper(MotionMapper *p)
+	{
+		motionMapper = p;
+		cubeMapping.reattachMotion();
 	}
 
 	// preprocess the scene to get the initial draw flags (hide scene elements)
