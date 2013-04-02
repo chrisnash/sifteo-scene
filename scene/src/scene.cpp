@@ -43,6 +43,7 @@ namespace Scene
 	class NoMotion : public MotionMapper
 	{
 		void attachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
+		void detachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
 	}
 	noMotion;
 
@@ -88,6 +89,7 @@ namespace Scene
 			toLogical[physical] = CubeID::UNDEFINED;
 			toPhysical[logical] = CubeID::UNDEFINED;
 			CubeID(physical).detachMotionBuffer();
+			motionMapper->detachMotion(logical, physical);
 
 			// bubble down allocated cubes to fill any spaces
 			// basically keep moving the highest assigned logical cube to the lowest unassigned logical cube
@@ -98,6 +100,7 @@ namespace Scene
 				physical = toPhysical[highest];
 				toPhysical[highest] = CubeID::UNDEFINED;
 				CubeID(physical).detachMotionBuffer();
+				motionMapper->detachMotion(highest, physical);
 
 				// bind physical to logical, bind highest to nowhere
 				toLogical[physical] = logical;
@@ -117,7 +120,7 @@ namespace Scene
 			return toLogical[physical];
 		}
 
-		void reattachMotion()
+		void detachAllMotion()
 		{
 			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
 			{
@@ -126,7 +129,20 @@ namespace Scene
 				{
 					CubeID cube(physical);
 					cube.detachMotionBuffer();
-					motionMapper->attachMotion(logical, physical);
+					motionMapper->detachMotion(logical, cube);
+				}
+			}
+		}
+
+		void attachAllMotion()
+		{
+			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
+			{
+				uint8_t physical = toPhysical[logical];
+				if(physical != CubeID::UNDEFINED)
+				{
+					CubeID cube(physical);
+					motionMapper->attachMotion(logical, cube);
 				}
 			}
 		}
@@ -182,8 +198,9 @@ namespace Scene
 
 	void setMotionMapper(MotionMapper *p)
 	{
+		cubeMapping.detachAllMotion();
 		motionMapper = (p == 0) ? &noMotion : p;
-		cubeMapping.reattachMotion();
+		cubeMapping.attachAllMotion();
 	}
 
 	void setFrameRate(float fr)

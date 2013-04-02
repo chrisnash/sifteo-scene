@@ -52,11 +52,13 @@ public:
 	void setCube(CubeID c)
 	{
 		id = c;
-		debounce = id.isTouching();
+		debounce = (id !=CubeID::UNDEFINED) ? id.isTouching() : false;
 	}
 
 	bool isTouching()
 	{
+		if(id == CubeID::UNDEFINED) return false;
+
 		bool now = id.isTouching();
 		bool then = debounce;
 		debounce = now;
@@ -115,6 +117,13 @@ public:
 		if(cube<3)
 		{
 			sullyTouch[cube].setCube(param);
+		}
+	}
+	void detachMotion(uint8_t cube, CubeID param)
+	{
+		if(cube<3)
+		{
+			sullyTouch[cube].setCube(CubeID::UNDEFINED);
 		}
 	}
 };

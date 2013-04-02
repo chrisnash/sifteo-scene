@@ -13,7 +13,8 @@ namespace Scene
 	class MotionMapper
 	{
 	public:
-		virtual void attachMotion(uint8_t cube, Sifteo::CubeID parameter);
+		virtual void attachMotion(uint8_t cube, Sifteo::CubeID parameter) = 0;
+		virtual void detachMotion(uint8_t cube, Sifteo::CubeID parameter) = 0;
 	};
 }
 
