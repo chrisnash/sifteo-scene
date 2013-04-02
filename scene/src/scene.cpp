@@ -158,6 +158,48 @@ namespace Scene
 				neighborhoods[physical] = Neighborhood(physical);
 			}
 		}
+
+		bool neighborUtility(uint8_t cube, uint8_t &side, uint8_t &otherCube, uint8_t &otherSide)
+		{
+			uint8_t p1 = toPhysical[cube];
+			uint8_t p2;
+
+			if(p1 == CubeID::UNDEFINED) return false;
+
+			if(otherCube != CubeID::UNDEFINED)
+			{
+				// the other cube is known, solve for side
+				p2 = toPhysical[otherCube];
+				if(p2 == CubeID::UNDEFINED) return false;
+				side = neighborhoods[p1].sideOf(p2);
+				if(side == Sifteo::NO_SIDE) return false;
+
+			}
+			else
+			{
+				// the side is known, solve for other cube
+				CubeID c2 = neighborhoods[p1].cubeAt((Sifteo::Side)side);
+				if(!c2.isDefined()) return false;
+				p2 = c2;
+				otherCube = toLogical[p2];
+				if(otherCube == CubeID::UNDEFINED)
+				{
+					// p1 has a neighbor entry pointing to a disconnected cube.
+					attentionNeighbors.mark(p1);
+					return false;
+				}
+			}
+			// get here, then p1:side -> p2 and  (in logical space) cube:side -> otherCube
+			otherSide = neighborhoods[p2].sideOf(p1);
+			if(otherSide == Sifteo::NO_SIDE)
+			{
+				// something's wrong, the neighbors don't agree.
+				attentionNeighbors.mark(p1);
+				attentionNeighbors.mark(p2);
+				return false;
+			}
+			return true;
+		}
 	}
 	cubeMapping;
 
