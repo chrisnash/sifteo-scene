@@ -44,6 +44,8 @@ public:
 	}
 };
 
+CubeID sullyTouch[3];
+
 class SimpleElementHandler : public Scene::ElementHandler
 {
 public:
@@ -64,7 +66,8 @@ public:
 	}
 	int32_t updateElement(Scene::Element *el, uint8_t fc=0)
 	{
-		return 0;
+		// maybe someone touched a sully
+		return sullyTouch[el->cube].isTouching() ? (el->cube+1) : 0;
 	}
 };
 
@@ -85,6 +88,18 @@ public:
 	}
 };
 
+class SimpleMotionMapper : public Scene::MotionMapper
+{
+public:
+	void attachMotion(uint8_t cube, CubeID param)
+	{
+		if(cube<3)
+		{
+			sullyTouch[cube] = param;
+		}
+	}
+};
+
 void main()
 {
 	// initialize scene
@@ -95,6 +110,8 @@ void main()
 	Scene::setElementHandler(&seh);
 	SimpleLoadingScreen sls;
 	Scene::setLoadingScreen(&sls);
+	SimpleMotionMapper smm;
+	Scene::setMotionMapper(&smm);
 
 	// use the scene builder API
 	Scene::Element *p = Scene::beginScene();
@@ -108,6 +125,7 @@ void main()
 		bzero(*p);					// type 0 update 0 mode 0 cube 0
 		p->mode |= Scene::ATTACHED;	// can't draw tiles unless the cube is attached
 		p->cube = i;
+		p->update = Scene::FULL_UPDATE;	// update sully every pass
 		p++;						// next element
 
 		bzero(*p);
@@ -120,5 +138,9 @@ void main()
 
 	Scene::endScene(p);			// complete the scene build
 
-	Scene::execute();			// this call never returns because we have no update methods.
+	while(1)
+	{
+		int32_t code = Scene::execute();			// this call never returns because we have no update methods.
+		LOG("A cube was touched: %d\n", code);
+	}
 }
