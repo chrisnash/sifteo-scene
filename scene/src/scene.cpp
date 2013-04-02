@@ -320,14 +320,17 @@ namespace Scene
 				{
 					// in the wrong mode, so need to do a mode switch
 					// but first you need to check assets for this mode
-					AssetConfiguration<ASSET_CAPACITY> *pAssets = modeHandler->requestAssets(elementMode & MODE_MASK, cube);
+					AssetConfiguration<ASSET_CAPACITY> *pAssets = modeHandler->requestAssets(cube, elementMode & MODE_MASK);
 					bool alreadyInstalled = true;
-					for(AssetConfigurationNode node : *pAssets)
+					if(pAssets)
 					{
-						if(!node.group()->isInstalled(physical))
+						for(AssetConfigurationNode node : *pAssets)
 						{
-							alreadyInstalled = false;
-							break;
+							if(!node.group()->isInstalled(physical))
+							{
+								alreadyInstalled = false;
+								break;
+							}
 						}
 					}
 					// if not already installed, you need to start a loader on this cube

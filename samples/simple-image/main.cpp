@@ -27,7 +27,7 @@ public:
 	}
 	Sifteo::AssetConfiguration<ASSET_CAPACITY> *requestAssets(uint8_t cube, uint8_t mode)
 	{
-		return &assetconf;
+		return (mode==0)? &assetconf : 0;
 	}
 	void switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v)
 	{
