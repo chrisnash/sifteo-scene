@@ -39,6 +39,9 @@ namespace Scene
 	bool fullRefresh = true;
 
 	CubeSet attentionCubes;
+	CubeSet attentionNeighbors;
+
+	Neighborhood neighborhoods[CUBE_ALLOCATION];
 
 	class NoMotion : public MotionMapper
 	{
@@ -146,6 +149,15 @@ namespace Scene
 				}
 			}
 		}
+
+		void refreshNeighbors()
+		{
+			unsigned physical;
+			while(attentionNeighbors.clearFirst(physical))
+			{
+				neighborhoods[physical] = Neighborhood(physical);
+			}
+		}
 	}
 	cubeMapping;
 
@@ -160,6 +172,12 @@ namespace Scene
 		void onCubeChange(unsigned cubeID)
 		{
 			attentionCubes.mark(cubeID);
+			attentionNeighbors.mark(cubeID);
+		}
+		void onNeighborChange(unsigned id1, unsigned side1, unsigned id2, unsigned side2)
+		{
+			attentionNeighbors.mark(id1);
+			attentionNeighbors.mark(id2);
 		}
 
 		void initialize()
@@ -167,10 +185,13 @@ namespace Scene
 			Sifteo::Events::cubeRefresh.set(&EventHandler::onCubeRefresh, this);
 
 			cubeMapping.initialize();
-			attentionCubes = CubeSet::connected();
+			attentionNeighbors = attentionCubes = CubeSet::connected();
 
 			Sifteo::Events::cubeConnect.set(&EventHandler::onCubeChange, this);
 			Sifteo::Events::cubeDisconnect.set(&EventHandler::onCubeChange, this);
+
+			Sifteo::Events::neighborAdd.set(&EventHandler::onNeighborChange, this);
+			Sifteo::Events::neighborRemove.set(&EventHandler::onNeighborChange, this);
 		}
 	}
 	eventHandler;
@@ -284,6 +305,11 @@ namespace Scene
 					}
 				}
 			}
+		}
+
+		if(!attentionNeighbors.empty())
+		{
+			cubeMapping.refreshNeighbors();
 		}
 
 		if(fullRefresh)
