@@ -60,7 +60,7 @@ public:
 			break;
 		}
 	}
-	int32_t updateElement(Scene::Element *el)
+	int32_t updateElement(Scene::Element *el, uint8_t fc=0)
 	{
 		return 0;
 	}

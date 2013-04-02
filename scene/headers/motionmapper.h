@@ -12,8 +12,7 @@ namespace Scene
 {
 	class MotionMapper
 	{
-		friend void doRedraw();
-	protected:
+	public:
 		virtual void attachMotion(uint8_t cube, Sifteo::CubeID parameter);
 	};
 }

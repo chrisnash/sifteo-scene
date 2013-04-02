@@ -48,6 +48,9 @@ namespace Scene
 
 	MotionMapper *motionMapper = &noMotion;
 
+	TimeTicker frameRate(60.0);
+	TimeStep timeStep;
+
 	class CubeMapping
 	{
 		uint8_t toPhysical[CUBE_ALLOCATION];
@@ -183,6 +186,12 @@ namespace Scene
 		cubeMapping.reattachMotion();
 	}
 
+	void setFrameRate(float fr)
+	{
+		frameRate = TimeTicker(fr);
+		timeStep.next();				// reset the time stepper
+	}
+
 	// preprocess the scene to get the initial draw flags (hide scene elements)
 	void preprocessScene()
 	{
@@ -228,7 +237,7 @@ namespace Scene
 		setScene(sceneBuffer, p - sceneBuffer);
 	}
 
-	void doRedraw()
+	int32_t doRedraw()
 	{
 		ASSERT(modeHandler != 0);
 		ASSERT(elementHandler != 0);
@@ -374,6 +383,7 @@ namespace Scene
 				{
 					LOG("SCENE: Completed download to cube %d\n", i);
 					cubesLoading.clear(i);
+					timeStep.next();			// reset the frame clock
 				}
 			}
 			if(cubesLoading.empty())
@@ -382,13 +392,39 @@ namespace Scene
 			}
 		}
 		while(!redraw.empty() || !cubesLoading.empty());
+
+		timeStep.next();									// get a time sample
+		uint8_t fc = frameRate.tick(timeStep.delta());		// figure out how much to advance the clock
+		int32_t exitCode = 0;
+
+		for(uint16_t i = 0; (i<sceneSize); i++)
+		{
+			Element *element = sceneData + i;
+			if(element->update == Scene::FULL_UPDATE)
+			{
+				exitCode = elementHandler->updateElement(element, fc);
+				if(exitCode !=0) return exitCode;
+			}
+			else if(element->update != 0)
+			{
+				uint8_t ur = fc;
+				while(ur >= element->update)
+				{
+					ur -= element->update;
+					element->update = 0;
+					exitCode = elementHandler->updateElement(element);
+					if(exitCode !=0) return exitCode;
+				}
+				element->update -= ur;
+			}
+		}
+		return exitCode;
 	}
 
 	int32_t execute()
 	{
-		while(1)
-		{
-			doRedraw();
-		}
+		int32_t exitCode;
+		while( (exitCode=doRedraw()) == 0);
+		return exitCode;
 	}
 }

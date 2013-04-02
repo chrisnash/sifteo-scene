@@ -34,6 +34,7 @@ namespace Scene
 	void setElementHandler(ElementHandler *p);
 	void setLoadingScreen(LoadingScreen *p);
 	void setMotionMapper(MotionMapper *p);
+	void setFrameRate(float frameRate);
 
 	// API to build a scene directly into the buffer
 	Element *beginScene();
@@ -44,12 +45,6 @@ namespace Scene
 	void setScene(Element *scene, uint16_t count);
 
 	int32_t execute();
-
-	// perhaps not publicly exported
-	uint8_t updateCount();
-	int32_t doUpdate(Element *element, uint8_t frames=0);
-	bool doRedraw(Element *element);
-
 }
 
 #endif /* SCENE_H_ */
