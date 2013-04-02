@@ -44,7 +44,26 @@ public:
 	}
 };
 
-CubeID sullyTouch[3];
+class Debounce
+{
+	CubeID id;
+	bool debounce;
+public:
+	void setCube(CubeID c)
+	{
+		id = c;
+		debounce = id.isTouching();
+	}
+
+	bool isTouching()
+	{
+		bool now = id.isTouching();
+		bool then = debounce;
+		debounce = now;
+		return (now && !then);
+	}
+};
+Debounce sullyTouch[3];
 
 class SimpleElementHandler : public Scene::ElementHandler
 {
@@ -95,7 +114,7 @@ public:
 	{
 		if(cube<3)
 		{
-			sullyTouch[cube] = param;
+			sullyTouch[cube].setCube(param);
 		}
 	}
 };
