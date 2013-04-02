@@ -179,7 +179,7 @@ namespace Scene
 
 	void setMotionMapper(MotionMapper *p)
 	{
-		motionMapper = p;
+		motionMapper = (p == 0) ? &noMotion : p;
 		cubeMapping.reattachMotion();
 	}
 
