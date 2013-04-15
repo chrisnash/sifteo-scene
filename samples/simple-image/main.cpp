@@ -101,11 +101,11 @@ public:
 	}
 	void onAttach(uint8_t cube, Sifteo::VideoBuffer &v)
 	{
-
+		v.bg0rom.text(vec(4,7), "loading:", BG0ROMDrawable::GREEN_ON_WHITE);
 	}
 	void update(uint8_t cube, float progress, Sifteo::VideoBuffer &v)
 	{
-
+		v.bg0rom.hBargraph(vec(0,8), progress*128);
 	}
 };
 
