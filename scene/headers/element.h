@@ -25,6 +25,8 @@ namespace Scene
 			uint8_t data[4];	// user defined data
 		};
 		void repaint();			// repaint this element
+		void clearUpdate();
+		void setUpdate(uint8_t update=1);
 	};
 }
 #endif /* ELEMENT_H_ */

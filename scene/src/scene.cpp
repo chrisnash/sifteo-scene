@@ -535,10 +535,26 @@ namespace Scene
 		return exitCode;
 	}
 
+	Element *getElement(uint16_t index)
+	{
+		ASSERT(index <sceneSize);
+		return sceneBuffer + index;
+	}
+
 	void Element::repaint()
 	{
 		uint16_t index = this - sceneBuffer;
 		ASSERT(index < sceneSize);
 		redraw.mark(index);
+	}
+
+	void Element::setUpdate(uint8_t u)
+	{
+		update = u;
+	}
+
+	void Element::clearUpdate()
+	{
+		setUpdate(0);
 	}
 }

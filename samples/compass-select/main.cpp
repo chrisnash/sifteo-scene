@@ -66,7 +66,9 @@ public:
 		return (now && !then);
 	}
 };
-Debounce sullyTouch[3];
+Debounce sullyTouch;
+TiltShakeRecognizer tsr;
+int currentlySelected = 0;
 
 RGB565 colorCycle[] = {
 		RGB565::fromRGB(0xFF0000),	// red
@@ -124,7 +126,31 @@ public:
 		switch(el->type)
 		{
 		case 0:		// sully
-			return sullyTouch[el->cube].isTouching() ? (el->cube+1) : 0;
+			{		// introduce scope
+				tsr.update();	// update Sully's TSR.
+				// determine what the player is selecting, if anything.
+				Byte3 tilt = tsr.tilt;
+				// tilt.y -1 =>1 tilt.x -1 =>2, tilt.y +1 => 3, tilt.x +1 =>4, (0,0)=>0
+				int selected = 0;
+				if(tilt.y) selected = tilt.y+2; else if(tilt.x) selected = tilt.x+3;
+				// if anything is selected and the selection has changed...
+				if(selected && (selected != currentlySelected))
+				{
+					if(currentlySelected)
+					{
+						Scene::Element *old = Scene::getElement(currentlySelected*2);	// the color cycler for this guy
+						ColorChanger *cc = (ColorChanger *)old->object;
+						cc->currentColor = RGB565::fromRGB(0xC0C0C0);					// make him gray
+						old->clearUpdate();												// and stop him updating
+						old->repaint();													// and make sure he gets repainted
+					}
+					currentlySelected = selected;
+					Scene::Element *now = Scene::getElement(currentlySelected*2);
+					ColorChanger *cc = (ColorChanger *)now->object;
+					now->setUpdate();													// and start him updating, he'll repaint when he does
+				}
+			}
+			return (currentlySelected && sullyTouch.isTouching()) ? currentlySelected : 0;	// exit if something selected and you touched it
 		default:	// color changer
 			ColorChanger *cc = (ColorChanger*)(el->object);
 			cc->updateElement(el);
@@ -155,16 +181,17 @@ class SimpleMotionMapper : public Scene::MotionMapper
 public:
 	void attachMotion(uint8_t cube, CubeID param)
 	{
-		if(cube<3)
+		if(cube==0)
 		{
-			sullyTouch[cube].setCube(param);
+			sullyTouch.setCube(param);
+			tsr.attach(param);
 		}
 	}
 	void detachMotion(uint8_t cube, CubeID param)
 	{
-		if(cube<3)
+		if(cube==0)
 		{
-			sullyTouch[cube].setCube(CubeID::UNDEFINED);
+			sullyTouch.setCube(CubeID::UNDEFINED);
 		}
 	}
 };
@@ -193,13 +220,13 @@ void main()
 	for(int i=0; i<4; i++)
 	{
 		Scene::addElement(1, 0,i+1, Scene::NO_UPDATE, Scene::NO_UPDATE, (void *)text_messages[i]);	// type 1 cube 0 modes 1-4
-		Scene::addElement(2, 0,i+1, i*2+1, 8, (void *)(changers + i));								// start color changers at different timer offsets for the moment
+		Scene::addElement(2, 0,i+1, 0, 8, (void *)(changers + i));									// color changers are not running initially
 	}
 	Scene::endScene();			// complete the scene build
 
 	while(1)
 	{
 		int32_t code = Scene::execute();			// this call never returns because we have no update methods.
-		LOG("A cube was touched: %d\n", code);
+		LOG("A selection was made: %d\n", code);
 	}
 }

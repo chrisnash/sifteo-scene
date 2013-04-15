@@ -39,6 +39,8 @@ namespace Scene
 	void endScene();
 
 	int32_t execute();
+
+	Element *getElement(uint16_t index);
 }
 
 #endif /* SCENE_H_ */
