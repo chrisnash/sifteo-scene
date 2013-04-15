@@ -11,6 +11,9 @@ using namespace Sifteo;
 
 namespace Scene
 {
+	bool scenelog = false;
+#define SCENELOG if(scenelog) LOG
+
 	// the items that need a redraw now
 	BitArray<SCENE_MAX_SIZE> redraw;
 	// the items that need a redraw in order to do a full render
@@ -395,7 +398,7 @@ namespace Scene
 				// if the mode is OK, just draw it
 				if(currentMode == elementMode)
 				{
-					LOG("SCENE: Draw element %d\n", i);
+					SCENELOG("SCENE: Draw element %d\n", i);
 					elementHandler->drawElement(element, vid[cube]);
 					dirty.mark(cube);
 				}
@@ -426,10 +429,10 @@ namespace Scene
 					{
 						if(cubesLoading.empty())
 						{
-							LOG("SCENE: Opening a new loader\n");
+							SCENELOG("SCENE: Opening a new loader\n");
 							assetLoader.init();
 						}
-						LOG("SCENE: Beginning download to cube %d\n", cube);
+						SCENELOG("SCENE: Beginning download to cube %d\n", cube);
 						assetLoader.start(*pAssets, CubeSet(physical));
 						cubesLoading.mark(physical);
 						currentMode = currentModes[cube] = NO_MODE;
@@ -442,7 +445,7 @@ namespace Scene
 					else
 					{
 						// ok to perform the mode switch, and may as well attach right now
-						LOG("SCENE: Mode switch of cube %d\n", cube);
+						SCENELOG("SCENE: Mode switch of cube %d\n", cube);
 						CubeID(physical).detachVideoBuffer();
 						// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
 						bool attachNow = modeHandler->switchMode(cube, elementMode, vid[cube]);
@@ -488,7 +491,7 @@ namespace Scene
 				loadingScreen->update(logical, progress, vid[logical]);
 				if(assetLoader.isComplete(i))
 				{
-					LOG("SCENE: Completed download to cube %d\n", i);
+					SCENELOG("SCENE: Completed download to cube %d\n", i);
 					cubesLoading.clear(i);
 					timeStep.next();			// reset the frame clock
 				}
