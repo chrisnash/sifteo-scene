@@ -19,11 +19,8 @@
 namespace Scene
 {
 	const uint8_t HIDE 			= 0x80;
-	const uint8_t ATTACHED 		= 0x40;
-	const uint8_t DIRTY			= 0x20;
 	const uint8_t MODE_MASK		= 0x1F;
 	const uint8_t NO_MODE		= 0x1F;
-	const uint8_t STATE_MASK	= (ATTACHED | MODE_MASK);
 
 	const uint8_t NO_UPDATE		= 0x00;
 	const uint8_t FULL_UPDATE	= 0xFF;

@@ -377,7 +377,8 @@ namespace Scene
 		// for at least one paint cycle
 		do
 		{
-			BitArray<CUBE_ALLOCATION> dirty(0,0);		// mark cubes that are drawn on, you can't mode switch until they paint
+			BitArray<CUBE_ALLOCATION> dirty(0,0);			// mark cubes that are drawn on, you can't mode switch until they paint
+			BitArray<CUBE_ALLOCATION> attachPending(0,0);	// mark cubes that were drawn on in detached mode
 			BitArray<SCENE_MAX_SIZE> todo = redraw;
 			redraw.clear();
 
@@ -453,9 +454,17 @@ namespace Scene
 						// ok to perform the mode switch, and may as well attach right now
 						LOG("SCENE: Mode switch of cube %d\n", cube);
 						CubeID(physical).detachVideoBuffer();
-						modeHandler->switchMode(cube, elementMode & MODE_MASK, vid[cube]);
+						// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
+						bool attachNow = modeHandler->switchMode(cube, elementMode & MODE_MASK, vid[cube]);
 						currentMode = currentModes[cube] = elementMode & MODE_MASK;
-						vid[cube].attach(physical);
+						if(attachNow)
+						{
+							vid[cube].attach(physical);
+						}
+						else
+						{
+							attachPending.mark(cube);
+						}
 						// on a mode switch, any active objects in this mode on this cube need to be redrawn ASAP
 						// for the moment, loop through all items to find matches.
 						for(unsigned j : initialDraw)
@@ -469,6 +478,13 @@ namespace Scene
 						}
 					}
 				}
+			}
+
+			// attach any cubes that you queued up for later
+			for(uint8_t cube : attachPending)
+			{
+				uint8_t physical = cubeMapping.physical(cube);
+				vid[cube].attach(physical);
 			}
 
 			// yield a while

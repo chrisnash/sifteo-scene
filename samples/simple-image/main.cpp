@@ -30,17 +30,18 @@ public:
 	{
 		return (mode==0)? &assetconf : 0;
 	}
-	void switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v)
+	bool switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v)
 	{
 		switch(mode)
 		{
 		case 0:
 			v.initMode(BG0);
-			break;
+			return true;					// attach immediately
 		case 1:
 			v.initMode(FB128, 112, 16);		// just the bottom 16 rows of the display
-			break;
+			return false;					// attach as late as you can get away with
 		}
+		return false;
 	}
 };
 
@@ -151,7 +152,6 @@ void main()
 	for(int i=0; i<3; i++)
 	{
 		bzero(*p);					// type 0 update 0 mode 0 cube 0
-		p->mode |= Scene::ATTACHED;	// can't draw tiles unless the cube is attached
 		p->cube = i;
 		p->update = Scene::FULL_UPDATE;	// update sully every pass
 		p++;						// next element
