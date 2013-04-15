@@ -71,9 +71,9 @@ Debounce sullyTouch[3];
 class SimpleElementHandler : public Scene::ElementHandler
 {
 public:
-	void drawElement(Scene::Element *el, Sifteo::VideoBuffer &v)
+	void drawElement(Scene::Element &el, Sifteo::VideoBuffer &v)
 	{
-		switch(el->type)
+		switch(el.type)
 		{
 		case 0:
 			v.bg0.image(vec(0,0), Sully);
@@ -82,14 +82,14 @@ public:
 			v.colormap[0] = RGB565::fromRGB(0x000080);
 			v.colormap[1] = RGB565::fromRGB(0xFFFFFF);		// white on dark blue
 			v.fb128.fill(vec(0,0), vec(128,16), 0);			// fill it
-			Font::drawCentered(v, vec(0,0), vec(128, 16), (const char *)(el->object));
+			Font::drawCentered(v, vec(0,0), vec(128, 16), (const char *)el.object);
 			break;
 		}
 	}
-	int32_t updateElement(Scene::Element *el, uint8_t fc=0)
+	int32_t updateElement(Scene::Element &el, uint8_t fc=0)
 	{
 		// maybe someone touched a sully
-		return sullyTouch[el->cube].isTouching() ? (el->cube+1) : 0;
+		return sullyTouch[el.cube].isTouching() ? (el.cube+1) : 0;
 	}
 };
 
@@ -134,13 +134,13 @@ void main()
 	// initialize scene
 	Scene::initialize();
 	SimpleModeHandler smh;
-	Scene::setModeHandler(&smh);
+	Scene::setModeHandler(smh);
 	SimpleElementHandler seh;
-	Scene::setElementHandler(&seh);
+	Scene::setElementHandler(seh);
 	SimpleLoadingScreen sls;
-	Scene::setLoadingScreen(&sls);
+	Scene::setLoadingScreen(sls);
 	SimpleMotionMapper smm;
-	Scene::setMotionMapper(&smm);
+	Scene::setMotionMapper(smm);
 
 	// use the scene builder API
 	Scene::beginScene();

@@ -85,7 +85,7 @@ public:
 	RGB565 currentColor = RGB565::fromRGB(0xC0C0C0);	// a boring gray
 	int cycleIndex = 0;									// when animating
 
-	void updateElement(Scene::Element *el)
+	void updateElement(Scene::Element &el)
 	{
 		cycleIndex++;
 		if(cycleIndex == arraysize(colorCycle))
@@ -93,16 +93,16 @@ public:
 			cycleIndex = 0;
 		}
 		currentColor = colorCycle[cycleIndex];
-		el->repaint();
+		el.repaint();
 	}
 };
 
 class SimpleElementHandler : public Scene::ElementHandler
 {
 public:
-	void drawElement(Scene::Element *el, Sifteo::VideoBuffer &v)
+	void drawElement(Scene::Element &el, Sifteo::VideoBuffer &v)
 	{
-		switch(el->type)
+		switch(el.type)
 		{
 		case 0:
 			v.bg0.image(vec(0,0), Sully);
@@ -112,18 +112,18 @@ public:
 			v.colormap[0] = RGB565::fromRGB(0x000080);
 			v.colormap[1] = RGB565::fromRGB(0xFFFFFF);		// white on dark blue
 			v.fb128.fill(vec(0,0), vec(128,16), 0);			// fill it
-			Font::drawCentered(v, vec(0,0), vec(128, 16), (const char *)(el->object));
+			Font::drawCentered(v, vec(0,0), vec(128, 16), (const char *)el.object);
 			break;
 		default:
 			// the color changer
-			ColorChanger *cc = (ColorChanger*)(el->object);
+			ColorChanger *cc = (ColorChanger*)el.object;
 			v.colormap[1] = cc->currentColor;
 			break;
 		}
 	}
-	int32_t updateElement(Scene::Element *el, uint8_t fc=0)
+	int32_t updateElement(Scene::Element &el, uint8_t fc=0)
 	{
-		switch(el->type)
+		switch(el.type)
 		{
 		case 0:		// sully
 			{		// introduce scope
@@ -138,21 +138,21 @@ public:
 				{
 					if(currentlySelected)
 					{
-						Scene::Element *old = Scene::getElement(currentlySelected*2);	// the color cycler for this guy
-						ColorChanger *cc = (ColorChanger *)old->object;
+						Scene::Element &old = Scene::getElement(currentlySelected*2);	// the color cycler for this guy
+						ColorChanger *cc = (ColorChanger *)old.object;
 						cc->currentColor = RGB565::fromRGB(0xC0C0C0);					// make him gray
-						old->clearUpdate();												// and stop him updating
-						old->repaint();													// and make sure he gets repainted
+						old.clearUpdate();												// and stop him updating
+						old.repaint();													// and make sure he gets repainted
 					}
 					currentlySelected = selected;
-					Scene::Element *now = Scene::getElement(currentlySelected*2);
-					ColorChanger *cc = (ColorChanger *)now->object;
-					now->setUpdate();													// and start him updating, he'll repaint when he does
+					Scene::Element &now = Scene::getElement(currentlySelected*2);
+					ColorChanger *cc = (ColorChanger *)now.object;
+					now.setUpdate();													// and start him updating, he'll repaint when he does
 				}
 			}
 			return (currentlySelected && sullyTouch.isTouching()) ? currentlySelected : 0;	// exit if something selected and you touched it
 		default:	// color changer
-			ColorChanger *cc = (ColorChanger*)(el->object);
+			ColorChanger *cc = (ColorChanger*)el.object;
 			cc->updateElement(el);
 			return 0;
 		}
@@ -201,13 +201,13 @@ void main()
 	// initialize scene
 	Scene::initialize();
 	SimpleModeHandler smh;
-	Scene::setModeHandler(&smh);
+	Scene::setModeHandler(smh);
 	SimpleElementHandler seh;
-	Scene::setElementHandler(&seh);
+	Scene::setElementHandler(seh);
 	SimpleLoadingScreen sls;
-	Scene::setLoadingScreen(&sls);
+	Scene::setLoadingScreen(sls);
 	SimpleMotionMapper smm;
-	Scene::setMotionMapper(&smm);
+	Scene::setMotionMapper(smm);
 
 	// use the scene builder API
 	Scene::beginScene();

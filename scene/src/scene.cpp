@@ -248,26 +248,30 @@ namespace Scene
 		eventHandler.initialize();
 	}
 
-	void setModeHandler(ModeHandler *p)
+	void setModeHandler(ModeHandler &p)
 	{
-		modeHandler = p;
+		modeHandler = &p;
 	}
 
-	void setElementHandler(ElementHandler *p)
+	void setElementHandler(ElementHandler &p)
 	{
-		elementHandler = p;
+		elementHandler = &p;
 	}
 
-	void setLoadingScreen(LoadingScreen *p)
+	void setLoadingScreen(LoadingScreen &p)
 	{
-		loadingScreen = p;
+		loadingScreen = &p;
 	}
 
-	void setMotionMapper(MotionMapper *p)
+	void setMotionMapper(MotionMapper &p)
 	{
 		cubeMapping.detachAllMotion();
-		motionMapper = (p == 0) ? &noMotion : p;
+		motionMapper = &p;
 		cubeMapping.attachAllMotion();
+	}
+	void clearMotionMapper()
+	{
+		setMotionMapper(noMotion);
 	}
 
 	void setFrameRate(float fr)
@@ -378,8 +382,8 @@ namespace Scene
 			unsigned i;
 			while(todo.clearFirst(i))
 			{
-				Element *element = sceneBuffer + i;
-				uint8_t cube = element->cube;
+				Element &element = sceneBuffer[i];
+				uint8_t cube = element.cube;
 				uint8_t physical = cubeMapping.physical(cube);
 				if(physical == CubeID::UNDEFINED)
 				{
@@ -509,23 +513,23 @@ namespace Scene
 
 		for(uint16_t i = 0; (i<sceneSize); i++)
 		{
-			Element *element = sceneBuffer + i;
-			if(element->update == Scene::FULL_UPDATE)
+			Element &element = sceneBuffer[i];
+			if(element.update == Scene::FULL_UPDATE)
 			{
 				exitCode = elementHandler->updateElement(element, fc);
 				if(exitCode !=0) return exitCode;
 			}
-			else if(element->update != 0)
+			else if(element.update != 0)
 			{
 				uint8_t ur = fc;
-				while(ur >= element->update)
+				while(ur >= element.update)
 				{
-					ur -= element->update;
+					ur -= element.update;
 					exitCode = elementHandler->updateElement(element);
 					if(exitCode !=0) return exitCode;
-					element->update = element->autoupdate;
+					element.update = element.autoupdate;
 				}
-				element->update -= ur;
+				element.update -= ur;
 			}
 		}
 		return 0;
@@ -538,10 +542,10 @@ namespace Scene
 		return exitCode;
 	}
 
-	Element *getElement(uint16_t index)
+	Element &getElement(uint16_t index)
 	{
-		ASSERT(index <sceneSize);
-		return sceneBuffer + index;
+		ASSERT(index < sceneSize);
+		return sceneBuffer[index];
 	}
 
 	void Element::repaint()

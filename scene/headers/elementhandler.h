@@ -14,8 +14,8 @@ namespace Scene
 	{
 		friend int32_t doRedraw();
 	protected:
-		virtual void drawElement(Element *el, Sifteo::VideoBuffer &v) = 0;
-		virtual int32_t updateElement(Element *el, uint8_t fc=0) = 0;
+		virtual void drawElement(Element &el, Sifteo::VideoBuffer &v) = 0;
+		virtual int32_t updateElement(Element &el, uint8_t fc=0) = 0;
 	};
 }
 
