@@ -401,7 +401,19 @@ namespace Scene
 				uint8_t currentMode = currentModes[cube];
 				uint8_t elementMode = element->mode;
 
-				if( ((currentMode & MODE_MASK) != (elementMode & MODE_MASK)) && !dirty.test(cube))
+				// if the mode is OK, just draw it
+				if((currentMode & MODE_MASK) == (elementMode & MODE_MASK))
+				{
+					LOG("SCENE: Draw element %d\n", i);
+					elementHandler->drawElement(element, vid[cube]);
+					dirty.mark(cube);
+				}
+				// if the cube is dirty, just requeue this one for after the next paint event
+				else if(dirty.test(cube))
+				{
+					redraw.mark(i);
+				}
+				else
 				{
 					// in the wrong mode, so need to do a mode switch
 					// but first you need to check assets for this mode
@@ -434,6 +446,7 @@ namespace Scene
 						loadingScreen->init(cube, vid[cube]);
 						vid[cube].attach(physical);
 						loadingScreen->onAttach(cube, vid[cube]);
+						redraw.mark(i);	// queue this item after at least one loader paint cycle
 					}
 					else
 					{
@@ -443,18 +456,18 @@ namespace Scene
 						modeHandler->switchMode(cube, elementMode & MODE_MASK, vid[cube]);
 						currentMode = currentModes[cube] = elementMode & MODE_MASK;
 						vid[cube].attach(physical);
+						// on a mode switch, any active objects in this mode on this cube need to be redrawn ASAP
+						// for the moment, loop through all items to find matches.
+						for(unsigned j : initialDraw)
+						{
+							Element *resync = sceneData + j;
+							uint8_t resyncMode = resync->mode & MODE_MASK;
+							if((currentMode == resyncMode) && (resync->cube==cube))
+							{
+								todo.mark(j);
+							}
+						}
 					}
-				}
-
-				if((currentMode & MODE_MASK) == (elementMode & MODE_MASK))
-				{
-					LOG("SCENE: Draw element %d\n", i);
-					elementHandler->drawElement(element, vid[cube]);
-					dirty.mark(cube);
-				}
-				else
-				{
-					redraw.mark(i);
 				}
 			}
 
