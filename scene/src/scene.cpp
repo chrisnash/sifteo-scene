@@ -403,7 +403,7 @@ namespace Scene
 				uint8_t elementMode = element->mode;
 
 				// if the mode is OK, just draw it
-				if((currentMode & MODE_MASK) == (elementMode & MODE_MASK))
+				if(currentMode == elementMode)
 				{
 					LOG("SCENE: Draw element %d\n", i);
 					elementHandler->drawElement(element, vid[cube]);
@@ -418,7 +418,7 @@ namespace Scene
 				{
 					// in the wrong mode, so need to do a mode switch
 					// but first you need to check assets for this mode
-					AssetConfiguration<ASSET_CAPACITY> *pAssets = modeHandler->requestAssets(cube, elementMode & MODE_MASK);
+					AssetConfiguration<ASSET_CAPACITY> *pAssets = modeHandler->requestAssets(cube, elementMode);
 					bool alreadyInstalled = true;
 					if(pAssets)
 					{
@@ -455,8 +455,8 @@ namespace Scene
 						LOG("SCENE: Mode switch of cube %d\n", cube);
 						CubeID(physical).detachVideoBuffer();
 						// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
-						bool attachNow = modeHandler->switchMode(cube, elementMode & MODE_MASK, vid[cube]);
-						currentMode = currentModes[cube] = elementMode & MODE_MASK;
+						bool attachNow = modeHandler->switchMode(cube, elementMode, vid[cube]);
+						currentMode = currentModes[cube] = elementMode;
 						if(attachNow)
 						{
 							vid[cube].attach(physical);
@@ -470,7 +470,7 @@ namespace Scene
 						for(unsigned j : initialDraw)
 						{
 							Element *resync = sceneData + j;
-							uint8_t resyncMode = resync->mode & MODE_MASK;
+							uint8_t resyncMode = resync->mode;
 							if((currentMode == resyncMode) && (resync->cube==cube))
 							{
 								todo.mark(j);
