@@ -279,9 +279,9 @@ namespace Scene
 		for(uint16_t i = 0; (i<sceneSize); i++)
 		{
 			Element *element = sceneData + i;
-			if(element->mode & Scene::HIDE)
+			if(element->cube & Scene::HIDE)
 			{
-				element->mode &= ~Scene::HIDE;
+				element->cube &= ~Scene::HIDE;
 				initialDraw.clear(i);
 			}
 		}
