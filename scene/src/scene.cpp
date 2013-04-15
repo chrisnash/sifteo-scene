@@ -518,14 +518,14 @@ namespace Scene
 				while(ur >= element->update)
 				{
 					ur -= element->update;
-					element->update = 0;
 					exitCode = elementHandler->updateElement(element);
 					if(exitCode !=0) return exitCode;
+					element->update = element->autoupdate;
 				}
 				element->update -= ur;
 			}
 		}
-		return exitCode;
+		return 0;
 	}
 
 	int32_t execute()
