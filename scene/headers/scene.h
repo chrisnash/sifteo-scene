@@ -34,12 +34,9 @@ namespace Scene
 	void setFrameRate(float frameRate);
 
 	// API to build a scene directly into the buffer
-	Element *beginScene();
-	void endScene(Element *);
-
-	// API's to copy a scene from ROM, or to set the current scene directly
-	void copyScene(Element *scene, uint16_t count);
-	void setScene(Element *scene, uint16_t count);
+	void beginScene();
+	void addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update, uint8_t autoupdate=0, void *object=0);
+	void endScene();
 
 	int32_t execute();
 }

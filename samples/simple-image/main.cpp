@@ -143,28 +143,18 @@ void main()
 	Scene::setMotionMapper(&smm);
 
 	// use the scene builder API
-	Scene::Element *p = Scene::beginScene();
-	LOG("Initial scene pointer %p\n", p);
+	Scene::beginScene();
 
 	const char *text_messages[] = {"Cube 1", "Cube 2", "Cube 3"};
 
 	// build three sully elements
 	for(int i=0; i<3; i++)
 	{
-		bzero(*p);					// type 0 update 0 mode 0 cube 0
-		p->cube = i;
-		p->update = Scene::FULL_UPDATE;	// update sully every pass
-		p++;						// next element
-
-		bzero(*p);
-		p->type = 1;				// type 1 is text
-		p->mode = 1;				// mode 1 is text at the bottom
-		p->cube = i;
-		p->object = (void *)text_messages[i];
-		p++;
+		Scene::addElement(0, i,0, Scene::FULL_UPDATE);												// type 0 is the sully item
+		Scene::addElement(1, i,1, Scene::NO_UPDATE, Scene::NO_UPDATE, (void *)text_messages[i]);	// type 1 is the text area
 	}
 
-	Scene::endScene(p);			// complete the scene build
+	Scene::endScene();			// complete the scene build
 
 	while(1)
 	{

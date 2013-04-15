@@ -19,12 +19,13 @@ namespace Scene
 	// current cube modes
 	uint8_t currentModes[CUBE_ALLOCATION];
 
-	// the current scene
-	Element *sceneData;
+	// the current scene builder pointer
+	Element *scenePointer;
 	// the current scene size
 	uint16_t sceneSize;
 	// the scene buffer available to build scenes on the fly
 	Element sceneBuffer[SCENE_MAX_SIZE];
+	uint8_t elementModes[SCENE_MAX_SIZE];
 
 	// video buffers
 	VideoBuffer vid[CUBE_ALLOCATION];
@@ -272,49 +273,38 @@ namespace Scene
 		timeStep.next();				// reset the time stepper
 	}
 
-	// preprocess the scene to get the initial draw flags (hide scene elements)
-	void preprocessScene()
+	void beginScene()
 	{
-		initialDraw = BitArray<SCENE_MAX_SIZE>(0, sceneSize);
-		for(uint16_t i = 0; (i<sceneSize); i++)
+		scenePointer = sceneBuffer;
+		initialDraw = BitArray<SCENE_MAX_SIZE>(0,0);
+	}
+
+	void addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update, uint8_t autoupdate, void *object)
+	{
+		uint16_t sceneIndex = scenePointer - sceneBuffer;
+		ASSERT(sceneIndex < SCENE_MAX_SIZE);
+
+		scenePointer->type = type;
+		if(cube & Scene::HIDE)
 		{
-			Element *element = sceneData + i;
-			if(element->cube & Scene::HIDE)
-			{
-				element->cube &= ~Scene::HIDE;
-				initialDraw.clear(i);
-			}
+			cube &= ~Scene::HIDE;
 		}
-		redraw = initialDraw;
+		else
+		{
+			initialDraw.mark(sceneIndex);
+		}
+		scenePointer->cube = cube;
+		elementModes[sceneIndex] = mode;
+		scenePointer->update = update;
+		scenePointer->autoupdate = autoupdate;
+		scenePointer->object = object;
+
+		scenePointer++;
 	}
 
-	void setScene(Element *scene, uint16_t size)
+	void endScene()
 	{
-		ASSERT(scene != 0);
-		ASSERT(size < SCENE_MAX_SIZE);
-
-		sceneData = scene;
-		sceneSize = size;
-		preprocessScene();
-	}
-
-	void copyScene(Element *scene, uint16_t size)
-	{
-		ASSERT(scene != 0);
-		ASSERT(size < SCENE_MAX_SIZE);
-
-		Sifteo::memcpy((uint8_t*)sceneBuffer, (uint8_t*)scene, size*sizeof(Element));
-		setScene(sceneBuffer, size);
-	}
-
-	Element *beginScene()
-	{
-		return sceneBuffer;
-	}
-
-	void endScene(Element *p)
-	{
-		setScene(sceneBuffer, p - sceneBuffer);
+		sceneSize = scenePointer - sceneBuffer;
 	}
 
 	int32_t doRedraw()
@@ -385,7 +375,7 @@ namespace Scene
 			unsigned i;
 			while(todo.clearFirst(i))
 			{
-				Element *element = sceneData + i;
+				Element *element = sceneBuffer + i;
 				uint8_t cube = element->cube;
 				uint8_t physical = cubeMapping.physical(cube);
 				if(physical == CubeID::UNDEFINED)
@@ -400,7 +390,7 @@ namespace Scene
 
 				// check to see if we are in the right mode (ignore top bits)
 				uint8_t currentMode = currentModes[cube];
-				uint8_t elementMode = element->mode;
+				uint8_t elementMode = elementModes[i];
 
 				// if the mode is OK, just draw it
 				if(currentMode == elementMode)
@@ -469,8 +459,8 @@ namespace Scene
 						// for the moment, loop through all items to find matches.
 						for(unsigned j : initialDraw)
 						{
-							Element *resync = sceneData + j;
-							uint8_t resyncMode = resync->mode;
+							Element *resync = sceneBuffer + j;
+							uint8_t resyncMode = elementModes[j];
 							if((currentMode == resyncMode) && (resync->cube==cube))
 							{
 								todo.mark(j);
@@ -516,7 +506,7 @@ namespace Scene
 
 		for(uint16_t i = 0; (i<sceneSize); i++)
 		{
-			Element *element = sceneData + i;
+			Element *element = sceneBuffer + i;
 			if(element->update == Scene::FULL_UPDATE)
 			{
 				exitCode = elementHandler->updateElement(element, fc);

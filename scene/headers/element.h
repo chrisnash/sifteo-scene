@@ -16,9 +16,9 @@ namespace Scene
 	{
 	public:
 		uint8_t type;			// the element type
-		uint8_t update;			// framecount before next update
-		uint8_t mode;			// the screen mode index, set Scene::HIDE to stop an item getting drawn
 		uint8_t cube;			// the cube for this entity (or undefined)
+		uint8_t update;			// framecount before next update
+		uint8_t autoupdate;		// framecount to put back in update register for automatic looping
 		union
 		{
 			void *object;		// pointer to user defined object
