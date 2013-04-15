@@ -68,6 +68,33 @@ public:
 };
 Debounce sullyTouch[3];
 
+RGB565 colorCycle[] = {
+		RGB565::fromRGB(0xFF0000),	// red
+		RGB565::fromRGB(0xFF00FF),	// magenta
+		RGB565::fromRGB(0x00FF00),	// green
+		RGB565::fromRGB(0x00FFFF),	// cyan
+		RGB565::fromRGB(0xFFFF00),	// yellow
+		RGB565::fromRGB(0xFFFFFF)	// white
+};
+
+class ColorChanger
+{
+public:
+	RGB565 currentColor = RGB565::fromRGB(0xC0C0C0);	// a boring gray
+	int cycleIndex = 0;									// when animating
+
+	void updateElement(Scene::Element *el)
+	{
+		cycleIndex++;
+		if(cycleIndex == arraysize(colorCycle))
+		{
+			cycleIndex = 0;
+		}
+		currentColor = colorCycle[cycleIndex];
+		el->repaint();
+	}
+};
+
 class SimpleElementHandler : public Scene::ElementHandler
 {
 public:
@@ -85,12 +112,24 @@ public:
 			v.fb128.fill(vec(0,0), vec(128,16), 0);			// fill it
 			Font::drawCentered(v, vec(0,0), vec(128, 16), (const char *)(el->object));
 			break;
+		default:
+			// the color changer
+			ColorChanger *cc = (ColorChanger*)(el->object);
+			v.colormap[1] = cc->currentColor;
+			break;
 		}
 	}
 	int32_t updateElement(Scene::Element *el, uint8_t fc=0)
 	{
-		// maybe someone touched a sully
-		return sullyTouch[el->cube].isTouching() ? (el->cube+1) : 0;
+		switch(el->type)
+		{
+		case 0:		// sully
+			return sullyTouch[el->cube].isTouching() ? (el->cube+1) : 0;
+		default:	// color changer
+			ColorChanger *cc = (ColorChanger*)(el->object);
+			cc->updateElement(el);
+			return 0;
+		}
 	}
 };
 
@@ -147,12 +186,14 @@ void main()
 	Scene::beginScene();
 
 	const char *text_messages[] = {"North","West", "South", "East"};
+	ColorChanger changers[4];
 
 	// build the sully elements
 	Scene::addElement(0, 0,0, Scene::FULL_UPDATE);													// type 0 is the sully item
 	for(int i=0; i<4; i++)
 	{
 		Scene::addElement(1, 0,i+1, Scene::NO_UPDATE, Scene::NO_UPDATE, (void *)text_messages[i]);	// type 1 cube 0 modes 1-4
+		Scene::addElement(2, 0,i+1, i*2+1, 8, (void *)(changers + i));								// start color changers at different timer offsets for the moment
 	}
 	Scene::endScene();			// complete the scene build
 

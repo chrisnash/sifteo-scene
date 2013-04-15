@@ -534,4 +534,11 @@ namespace Scene
 		while( (exitCode=doRedraw()) == 0);
 		return exitCode;
 	}
+
+	void Element::repaint()
+	{
+		uint16_t index = this - sceneBuffer;
+		ASSERT(index < sceneSize);
+		redraw.mark(index);
+	}
 }

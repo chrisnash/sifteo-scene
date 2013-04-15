@@ -24,6 +24,7 @@ namespace Scene
 			void *object;		// pointer to user defined object
 			uint8_t data[4];	// user defined data
 		};
+		void repaint();			// repaint this element
 	};
 }
 #endif /* ELEMENT_H_ */
