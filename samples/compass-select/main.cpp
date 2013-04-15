@@ -110,7 +110,6 @@ public:
 		case 1:
 			// the text type
 			v.colormap[0] = RGB565::fromRGB(0x000080);
-			v.colormap[1] = RGB565::fromRGB(0xFFFFFF);		// white on dark blue
 			v.fb128.fill(vec(0,0), vec(128,16), 0);			// fill it
 			Font::drawCentered(v, vec(0,0), vec(128, 16), (const char *)el.object);
 			break;
