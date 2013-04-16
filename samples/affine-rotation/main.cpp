@@ -20,6 +20,7 @@ AssetSlot slot_3 = AssetSlot::allocate();
 class SimpleHandler : public Scene::Handler
 {
 	Sifteo::AssetConfiguration<ASSET_CAPACITY> assetconf;
+	uint8_t sync = 0;
 public:
 	SimpleHandler()
 	{
@@ -41,6 +42,7 @@ public:
 
 	void setAffine(Sifteo::VideoBuffer &v, uint16_t angle)
 	{
+		LOG("Setting affine angle to %04X\n", angle);
 		float f = (M_TAU*angle)/65536.0f;
 		AffineMatrix m = AffineMatrix::identity();
 
@@ -59,6 +61,7 @@ public:
 		switch(el.type)
 		{
 		case 0:
+			LOG("Rendering base image on screen %d\n", el.cube);
 			v.bg2.image(vec(0,0), Sully);
 			break;
 		case 1:
@@ -76,17 +79,27 @@ public:
 			setAffine(v, (scratch & 0x3FFF) - 0x2000);
 			break;
 		}
+		// we keep track of whether everything has been rendered here. We don't start the animation until both screens have rendered the rotation at least once.
+		sync |= el.type;
+		if(sync==0x03)
+		{
+			LOG("Animation starting, current angle %d\n", *pa);
+			sync = 0xFF;
+		}
 	}
 	int32_t updateElement(Scene::Element &el, uint8_t fc=0)
 	{
-		// the only element to update is the rotation. We treat el.object as a 16-bit unsigned for this
-		uint16_t *pa = (uint16_t*)&el.object;				// use the object field as a uint16.
-		(*pa) += fc*0x0100;									// full rotation takes 256 frames
+		// wait until both screens have started their render cycle before we update
+		if(sync==0xFF)
+		{
+			// the only element to update is the rotation. We treat el.object as a 16-bit unsigned for this
+			uint16_t *pa = (uint16_t*)&el.object;				// use the object field as a uint16.
+			(*pa) += fc*0x0100;									// full rotation takes 256 frames
 
-		// tell items 2 and 3 (the two rotations) to repaint
-		Scene::getElement(2).repaint();
-		Scene::getElement(3).repaint();
-
+			// tell items 2 and 3 (the two rotations) to repaint
+			Scene::getElement(2).repaint();
+			Scene::getElement(3).repaint();
+		}
 		return 0;
 	}
 };
