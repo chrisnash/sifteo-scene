@@ -11,8 +11,7 @@
 #include <sifteo.h>
 #include "element.h"
 #include "defines.h"
-#include "modehandler.h"
-#include "elementhandler.h"
+#include "handler.h"
 #include "loadingscreen.h"
 #include "motionmapper.h"
 
@@ -27,8 +26,7 @@ namespace Scene
 
 	void initialize();
 
-	void setModeHandler(ModeHandler &p);
-	void setElementHandler(ElementHandler &p);
+	void setHandler(Handler &p);
 	void setLoadingScreen(LoadingScreen &p);
 	void setMotionMapper(MotionMapper &p);
 	void clearMotionMapper();

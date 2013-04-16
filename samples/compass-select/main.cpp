@@ -17,34 +17,6 @@ AssetSlot slot_1 = AssetSlot::allocate();
 AssetSlot slot_2 = AssetSlot::allocate();
 AssetSlot slot_3 = AssetSlot::allocate();
 
-class SimpleModeHandler : public Scene::ModeHandler
-{
-	Sifteo::AssetConfiguration<ASSET_CAPACITY> assetconf;
-public:
-	SimpleModeHandler()
-	{
-		assetconf.clear();
-		assetconf.append(slot_1, Tiles);
-	}
-	Sifteo::AssetConfiguration<ASSET_CAPACITY> *requestAssets(uint8_t cube, uint8_t mode)
-	{
-		return (mode==0)? &assetconf : 0;
-	}
-	bool switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v)
-	{
-		switch(mode)
-		{
-		case 0:
-			v.initMode(BG0);
-			return true;					// attach immediately
-		default:
-			v.initMode(FB128, 0, 16);		// just the top 16 rows of the display
-			v.setOrientation((Sifteo::Side)(mode-1));		// modes 1 2 3 4 are T,L,B,R
-			return false;					// attach as late as you can get away with
-		}
-	}
-};
-
 // current UI state
 int currentlySelected = 0;
 
@@ -79,9 +51,33 @@ public:
 	}
 };
 
-class SimpleElementHandler : public Scene::ElementHandler
+class SimpleHandler : public Scene::Handler
 {
+	Sifteo::AssetConfiguration<ASSET_CAPACITY> assetconf;
 public:
+	SimpleHandler()
+	{
+		assetconf.clear();
+		assetconf.append(slot_1, Tiles);
+	}
+	Sifteo::AssetConfiguration<ASSET_CAPACITY> *requestAssets(uint8_t cube, uint8_t mode)
+	{
+		return (mode==0)? &assetconf : 0;
+	}
+	bool switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v)
+	{
+		switch(mode)
+		{
+		case 0:
+			v.initMode(BG0);
+			return true;					// attach immediately
+		default:
+			v.initMode(FB128, 0, 16);		// just the top 16 rows of the display
+			v.setOrientation((Sifteo::Side)(mode-1));		// modes 1 2 3 4 are T,L,B,R
+			return false;					// attach as late as you can get away with
+		}
+	}
+
 	void drawElement(Scene::Element &el, Sifteo::VideoBuffer &v)
 	{
 		switch(el.type)
@@ -184,10 +180,8 @@ void main()
 	Scene::initialize();
 	Scene::setMotionMapper(smm);	// not on the stack
 
-	SimpleModeHandler smh;
-	Scene::setModeHandler(smh);
-	SimpleElementHandler seh;
-	Scene::setElementHandler(seh);
+	SimpleHandler sh;
+	Scene::setHandler(sh);
 
 	// use the scene builder API
 	Scene::beginScene();

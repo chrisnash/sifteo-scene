@@ -36,8 +36,7 @@ namespace Scene
 	// Asset loader
 	AssetLoader assetLoader;
 
-	ModeHandler *modeHandler = 0;
-	ElementHandler *elementHandler = 0;
+	Handler *handler = 0;
 
 	class DefaultLoadingScreen : public LoadingScreen
 	{
@@ -327,14 +326,9 @@ namespace Scene
 		eventHandler.initialize();
 	}
 
-	void setModeHandler(ModeHandler &p)
+	void setHandler(Handler &p)
 	{
-		modeHandler = &p;
-	}
-
-	void setElementHandler(ElementHandler &p)
-	{
-		elementHandler = &p;
+		handler = &p;
 	}
 
 	void setLoadingScreen(LoadingScreen &p)
@@ -397,8 +391,7 @@ namespace Scene
 
 	int32_t doRedraw()
 	{
-		ASSERT(modeHandler != 0);
-		ASSERT(elementHandler != 0);
+		ASSERT(handler != 0);
 		ASSERT(loadingScreen != 0);
 
 		cubeMapping.refresh();
@@ -455,7 +448,7 @@ namespace Scene
 				if(currentMode == elementMode)
 				{
 					SCENELOG("SCENE: Draw element %d\n", i);
-					elementHandler->drawElement(element, vid[cube]);
+					handler->drawElement(element, vid[cube]);
 					dirty.mark(cube);
 				}
 				// if the cube is dirty, just requeue this one for after the next paint event
@@ -467,7 +460,7 @@ namespace Scene
 				{
 					// in the wrong mode, so need to do a mode switch
 					// but first you need to check assets for this mode
-					AssetConfiguration<ASSET_CAPACITY> *pAssets = modeHandler->requestAssets(cube, elementMode);
+					AssetConfiguration<ASSET_CAPACITY> *pAssets = handler->requestAssets(cube, elementMode);
 					bool alreadyInstalled = true;
 					if(pAssets)
 					{
@@ -504,7 +497,7 @@ namespace Scene
 						SCENELOG("SCENE: Mode switch of cube %d\n", cube);
 						CubeID(physical).detachVideoBuffer();
 						// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
-						bool attachNow = modeHandler->switchMode(cube, elementMode, vid[cube]);
+						bool attachNow = handler->switchMode(cube, elementMode, vid[cube]);
 						currentMode = currentModes[cube] = elementMode;
 						if(attachNow)
 						{
@@ -568,7 +561,7 @@ namespace Scene
 			Element &element = sceneBuffer[i];
 			if(element.update == Scene::FULL_UPDATE)
 			{
-				exitCode = elementHandler->updateElement(element, fc);
+				exitCode = handler->updateElement(element, fc);
 				if(exitCode !=0) return exitCode;
 			}
 			else if(element.update != 0)
@@ -577,7 +570,7 @@ namespace Scene
 				while(ur >= element.update)
 				{
 					ur -= element.update;
-					exitCode = elementHandler->updateElement(element);
+					exitCode = handler->updateElement(element);
 					if(exitCode !=0) return exitCode;
 					element.update = element.autoupdate;
 				}

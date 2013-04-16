@@ -5,17 +5,22 @@
  *      Author: chrisnash
  */
 
-#ifndef SCENE_MODEHANDLER_H_
-#define SCENE_MODEHANDLER_H_
+#ifndef SCENE_HANDLER_H_
+#define SCENE_HANDLER_H_
 
 namespace Scene
 {
-	class ModeHandler
+	class Handler
 	{
 		friend int32_t doRedraw();
 	protected:
+		// mode functions
 		virtual Sifteo::AssetConfiguration<ASSET_CAPACITY> *requestAssets(uint8_t cube, uint8_t mode) = 0;
 		virtual bool switchMode(uint8_t cube, uint8_t mode, Sifteo::VideoBuffer &v) = 0;
+		// element functions
+		virtual void drawElement(Element &el, Sifteo::VideoBuffer &v) = 0;
+		virtual int32_t updateElement(Element &el, uint8_t fc=0) = 0;
+
 	};
 }
-#endif /* MODEHANDLER_H_ */
+#endif /* HANDLER_H_ */
