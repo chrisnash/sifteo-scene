@@ -13,6 +13,10 @@ namespace Scene
 {
 	bool scenelog = false;
 #define SCENELOG if(scenelog) LOG
+	uint64_t timestamp;
+	bool scenetime = false;
+#define START_TIMER if(scenetime) timestamp = SystemTime::now().uptimeNS();
+#define END_TIMER if(scenetime) {uint64_t t = SystemTime::now().uptimeNS()-timestamp; SCENELOG("SCENE: elapsed time %uns\n", (uint32_t)t);}
 
 	// the items that need a redraw now
 	BitArray<SCENE_MAX_SIZE> redraw;
@@ -444,7 +448,9 @@ namespace Scene
 				if(currentMode == elementMode)
 				{
 					SCENELOG("SCENE: Draw element %d\n", i);
+					START_TIMER;
 					handler.drawElement(element, vid[cube]);
+					END_TIMER;
 					dirty.mark(cube);
 				}
 				// if the cube is dirty, just requeue this one for after the next paint event

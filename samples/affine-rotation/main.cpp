@@ -42,7 +42,6 @@ public:
 
 	void setAffine(Sifteo::VideoBuffer &v, uint16_t angle)
 	{
-		LOG("Setting affine angle to %04X\n", angle);
 		float f = (M_TAU*angle)/65536.0f;
 		AffineMatrix m = AffineMatrix::identity();
 
@@ -61,7 +60,6 @@ public:
 		switch(el.type)
 		{
 		case 0:
-			LOG("Rendering base image on screen %d\n", el.cube);
 			v.bg2.image(vec(0,0), Sully);
 			break;
 		case 1:
@@ -74,7 +72,7 @@ public:
 			// cube begins painting with one downloaded and not the other. We do a cheesy hack here and just call System::finish(), but
 			// really you should be locking memory if you're doing this kind of thing.
 			uint16_t scratch = *pa + 0x2000;
-			System::finish();
+			System::finish();	// how bad is this? Possibly very.
 			v.setOrientation((Sifteo::Side)(scratch>>14));
 			setAffine(v, (scratch & 0x3FFF) - 0x2000);
 			break;
@@ -83,7 +81,7 @@ public:
 		sync |= el.type;
 		if(sync==0x03)
 		{
-			LOG("Animation starting, current angle %d\n", *pa);
+			//LOG("Animation starting, current angle %d\n", *pa);
 			sync = 0xFF;
 		}
 	}
@@ -108,6 +106,7 @@ namespace Scene
 {
 	extern uint8_t frameThreshold;
 	extern bool scenelog;
+	extern bool scenetime;
 };
 
 void main()
@@ -116,6 +115,7 @@ void main()
 	// Note that the screen refresh rate isn't that great when running BG2.
 	Scene::frameThreshold = 0x08;
 	Scene::scenelog = true;
+	Scene::scenetime = true;
 
 	// initialize scene
 	Scene::initialize();
