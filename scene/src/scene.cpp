@@ -581,7 +581,6 @@ namespace Scene
 	void close()
 	{
 		cubeMapping.refresh();
-		cubeMapping.detachAllMotion();
 		cubeMapping.detachAllVideo();
 		sceneSize = 0;
 	}
