@@ -566,6 +566,7 @@ namespace Scene
 		cubeMapping.refresh();
 		cubeMapping.detachAllMotion();
 		cubeMapping.detachAllVideo();
+		sceneSize = 0;
 	}
 
 	Element &getElement(uint16_t index)
