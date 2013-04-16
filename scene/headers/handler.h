@@ -12,7 +12,7 @@ namespace Scene
 {
 	class Handler
 	{
-		friend int32_t doRedraw();
+		friend int32_t doRedraw(Handler &h);
 	protected:
 		// mode functions
 		virtual Sifteo::AssetConfiguration<ASSET_CAPACITY> *requestAssets(uint8_t cube, uint8_t mode) = 0;

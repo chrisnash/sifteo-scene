@@ -26,10 +26,10 @@ namespace Scene
 
 	void initialize();
 
-	void setHandler(Handler &p);
 	void setLoadingScreen(LoadingScreen &p);
 	void setMotionMapper(MotionMapper &p);
 	void clearMotionMapper();
+
 	void setFrameRate(float frameRate);
 
 	// API to build a scene directly into the buffer
@@ -37,7 +37,7 @@ namespace Scene
 	void addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update, uint8_t autoupdate=0, void *object=0);
 	void endScene();
 
-	int32_t execute();
+	int32_t execute(Handler &handler);
 	void close();
 
 	Element &getElement(uint16_t index);

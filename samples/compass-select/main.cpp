@@ -181,7 +181,6 @@ void main()
 	Scene::setMotionMapper(smm);	// not on the stack
 
 	SimpleHandler sh;
-	Scene::setHandler(sh);
 
 	// use the scene builder API
 	Scene::beginScene();
@@ -200,7 +199,7 @@ void main()
 
 	while(1)
 	{
-		int32_t code = Scene::execute();			// this call never returns because we have no update methods.
+		int32_t code = Scene::execute(sh);			// this call never returns because we have no update methods.
 		LOG("A selection was made: %d\n", code);
 	}
 }

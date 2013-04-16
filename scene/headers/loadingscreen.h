@@ -12,7 +12,7 @@ namespace Scene
 {
 	class LoadingScreen
 	{
-		friend int32_t doRedraw();
+		friend int32_t doRedraw(Handler &h);
 	protected:
 		virtual void init(uint8_t cube, Sifteo::VideoBuffer &v) = 0;
 		virtual void onAttach(uint8_t cube, Sifteo::VideoBuffer &v) = 0;
