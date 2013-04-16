@@ -40,6 +40,7 @@ namespace Scene
 	void endScene();
 
 	int32_t execute();
+	void close();
 
 	Element &getElement(uint16_t index);
 }

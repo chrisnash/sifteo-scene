@@ -141,6 +141,19 @@ namespace Scene
 			}
 		}
 
+		void detachAllVideo()
+		{
+			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
+			{
+				uint8_t physical = toPhysical[logical];
+				if(physical != CubeID::UNDEFINED)
+				{
+					CubeID cube(physical);
+					cube.detachVideoBuffer();
+				}
+			}
+		}
+
 		void attachAllMotion()
 		{
 			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
@@ -204,6 +217,40 @@ namespace Scene
 			}
 			return true;
 		}
+
+		void refresh()
+		{
+			if(!attentionCubes.empty())
+			{
+				CubeSet current = CubeSet::connected();
+				unsigned i;
+				while(attentionCubes.clearFirst(i))
+				{
+					if(current.test(i))
+					{
+						// cube is connected
+						if(allocate(i))
+						{
+							fullRefresh = true;
+						}
+					}
+					else
+					{
+						// cube is not connected
+						CubeID(i).detachVideoBuffer();
+						if(deallocate(i))
+						{
+							fullRefresh = true;
+						}
+					}
+				}
+			}
+
+			if(!attentionNeighbors.empty())
+			{
+				refreshNeighbors();
+			}
+		}
 	}
 	cubeMapping;
 
@@ -244,7 +291,6 @@ namespace Scene
 
 	void initialize()
 	{
-		fullRefresh = true;
 		eventHandler.initialize();
 	}
 
@@ -265,6 +311,7 @@ namespace Scene
 
 	void setMotionMapper(MotionMapper &p)
 	{
+		cubeMapping.refresh();
 		cubeMapping.detachAllMotion();
 		motionMapper = &p;
 		cubeMapping.attachAllMotion();
@@ -312,6 +359,7 @@ namespace Scene
 	void endScene()
 	{
 		sceneSize = scenePointer - sceneBuffer;
+		fullRefresh = true;
 	}
 
 	int32_t doRedraw()
@@ -320,36 +368,7 @@ namespace Scene
 		ASSERT(elementHandler != 0);
 		ASSERT(loadingScreen != 0);
 
-		if(!attentionCubes.empty())
-		{
-			CubeSet current = CubeSet::connected();
-			unsigned i;
-			while(attentionCubes.clearFirst(i))
-			{
-				if(current.test(i))
-				{
-					// cube is connected
-					if(cubeMapping.allocate(i))
-					{
-						fullRefresh = true;
-					}
-				}
-				else
-				{
-					// cube is not connected
-					CubeID(i).detachVideoBuffer();
-					if(cubeMapping.deallocate(i))
-					{
-						fullRefresh = true;
-					}
-				}
-			}
-		}
-
-		if(!attentionNeighbors.empty())
-		{
-			cubeMapping.refreshNeighbors();
-		}
+		cubeMapping.refresh();
 
 		if(fullRefresh)
 		{
@@ -540,6 +559,13 @@ namespace Scene
 		int32_t exitCode;
 		while( (exitCode=doRedraw()) == 0);
 		return exitCode;
+	}
+
+	void close()
+	{
+		cubeMapping.refresh();
+		cubeMapping.detachAllMotion();
+		cubeMapping.detachAllVideo();
 	}
 
 	Element &getElement(uint16_t index)
