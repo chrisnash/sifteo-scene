@@ -36,6 +36,10 @@ namespace Scene
 	// Asset loader
 	AssetLoader assetLoader;
 
+	// The frame threshold. Log a warning if the update counter is too large.
+	// The default value effectively disables this test.
+	uint8_t frameThreshold = 0xFF;
+
 	class DefaultLoadingScreen : public LoadingScreen
 	{
 	public:
@@ -546,6 +550,10 @@ namespace Scene
 
 		timeStep.next();									// get a time sample
 		uint8_t fc = frameRate.tick(timeStep.delta());		// figure out how much to advance the clock
+		if(fc > frameThreshold)
+		{
+			LOG("Unexpected large frame step: %d\n");
+		}
 		int32_t exitCode = 0;
 
 		for(uint16_t i = 0; (i<sceneSize); i++)
