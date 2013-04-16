@@ -104,8 +104,19 @@ public:
 	}
 };
 
+namespace Scene
+{
+	extern uint8_t frameThreshold;
+	extern bool scenelog;
+};
+
 void main()
 {
+	// set a frame threshold to log if ever the update value drops too low.
+	// Note that the screen refresh rate isn't that great when running BG2.
+	Scene::frameThreshold = 0x08;
+	Scene::scenelog = true;
+
 	// initialize scene
 	Scene::initialize();
 
