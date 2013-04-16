@@ -69,6 +69,7 @@ namespace Scene
 	{
 		void attachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
 		void detachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
+		void updateMotion(uint8_t cube) {}
 	}
 	noMotion;
 	MotionMapper *motionMapper = &noMotion;
@@ -184,6 +185,20 @@ namespace Scene
 			}
 		}
 
+		void updateAllMotion()
+		{
+			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
+			{
+				uint8_t physical = toPhysical[logical];
+				if(physical != CubeID::UNDEFINED)
+				{
+					CubeID cube(physical);
+					motionMapper->updateMotion(logical);
+				}
+			}
+		}
+
+
 		void refreshNeighbors()
 		{
 			unsigned physical;
@@ -267,6 +282,7 @@ namespace Scene
 			{
 				refreshNeighbors();
 			}
+			updateAllMotion();
 		}
 	}
 	cubeMapping;

@@ -110,6 +110,10 @@ public:
 			sullyTouch[cube].setCube(CubeID::UNDEFINED);
 		}
 	}
+	void updateMotion(uint8_t cube)
+	{
+		// no need to do handling here
+	}
 };
 
 void main()

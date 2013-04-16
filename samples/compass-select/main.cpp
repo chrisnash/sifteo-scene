@@ -45,30 +45,12 @@ public:
 	}
 };
 
-class Debounce
-{
-	CubeID id;
-	bool debounce;
-public:
-	void setCube(CubeID c)
-	{
-		id = c;
-		debounce = (id !=CubeID::UNDEFINED) ? id.isTouching() : false;
-	}
-
-	bool isTouching()
-	{
-		if(id == CubeID::UNDEFINED) return false;
-
-		bool now = id.isTouching();
-		bool then = debounce;
-		debounce = now;
-		return (now && !then);
-	}
-};
-Debounce sullyTouch;
-TiltShakeRecognizer tsr;
+// current UI state
 int currentlySelected = 0;
+
+// current motion parameters updated by the motion updater
+int selected = 0;
+bool touching = false;
 
 RGB565 colorCycle[] = {
 		RGB565::fromRGB(0xFF0000),	// red
@@ -126,12 +108,6 @@ public:
 		{
 		case 0:		// sully
 			{		// introduce scope
-				tsr.update();	// update Sully's TSR.
-				// determine what the player is selecting, if anything.
-				Byte3 tilt = tsr.tilt;
-				// tilt.y -1 =>1 tilt.x -1 =>2, tilt.y +1 => 3, tilt.x +1 =>4, (0,0)=>0
-				int selected = 0;
-				if(tilt.y) selected = tilt.y+2; else if(tilt.x) selected = tilt.x+3;
 				// if anything is selected and the selection has changed...
 				if(selected && (selected != currentlySelected))
 				{
@@ -149,7 +125,7 @@ public:
 					now.setUpdate();													// and start him updating, he'll repaint when he does
 				}
 			}
-			return (currentlySelected && sullyTouch.isTouching()) ? currentlySelected : 0;	// exit if something selected and you touched it
+			return (currentlySelected && touching) ? currentlySelected : 0;	// exit if something selected and you touched it
 		default:	// color changer
 			ColorChanger *cc = (ColorChanger*)el.object;
 			cc->updateElement(el);
@@ -160,12 +136,25 @@ public:
 
 class SimpleMotionMapper : public Scene::MotionMapper
 {
+	CubeID id;
+	bool debounce;
+	TiltShakeRecognizer tsr;
 public:
+	bool isTouching()
+	{
+		if(id == CubeID::UNDEFINED) return false;
+		bool now = id.isTouching();
+		bool then = debounce;
+		debounce = now;
+		return (now && !then);
+	}
+
 	void attachMotion(uint8_t cube, CubeID param)
 	{
 		if(cube==0)
 		{
-			sullyTouch.setCube(param);
+			id = param;
+			debounce = (param !=CubeID::UNDEFINED) ? param.isTouching() : false;
 			tsr.attach(param);
 		}
 	}
@@ -173,21 +162,32 @@ public:
 	{
 		if(cube==0)
 		{
-			sullyTouch.setCube(CubeID::UNDEFINED);
+			id = CubeID::UNDEFINED;
 		}
 	}
-};
+	void updateMotion(uint8_t cube)
+	{
+		if(cube==0)
+		{
+			tsr.update();
+			Byte3 &tilt = tsr.tilt;
+			if(tilt.y) selected = tilt.y+2; else if(tilt.x) selected = tilt.x+3;
+			touching = isTouching();
+		}
+	}
+}
+smm;
 
 void main()
 {
 	// initialize scene
 	Scene::initialize();
+	Scene::setMotionMapper(smm);	// not on the stack
+
 	SimpleModeHandler smh;
 	Scene::setModeHandler(smh);
 	SimpleElementHandler seh;
 	Scene::setElementHandler(seh);
-	SimpleMotionMapper smm;
-	Scene::setMotionMapper(smm);
 
 	// use the scene builder API
 	Scene::beginScene();
