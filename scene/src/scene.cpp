@@ -552,7 +552,7 @@ namespace Scene
 		uint8_t fc = frameRate.tick(timeStep.delta());		// figure out how much to advance the clock
 		if(fc > frameThreshold)
 		{
-			LOG("Unexpected large frame step: %d\n");
+			LOG("Unexpected large frame step: %d\n", fc);
 		}
 		int32_t exitCode = 0;
 
