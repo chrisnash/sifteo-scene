@@ -38,7 +38,25 @@ namespace Scene
 
 	ModeHandler *modeHandler = 0;
 	ElementHandler *elementHandler = 0;
-	LoadingScreen *loadingScreen = 0;
+
+	class DefaultLoadingScreen : public LoadingScreen
+	{
+	public:
+		void init(uint8_t cube, Sifteo::VideoBuffer &v)
+		{
+			v.initMode(BG0_ROM);
+		}
+		void onAttach(uint8_t cube, Sifteo::VideoBuffer &v)
+		{
+			v.bg0rom.text(vec(4,7), "loading:", BG0ROMDrawable::GREEN_ON_WHITE);
+		}
+		void update(uint8_t cube, float progress, Sifteo::VideoBuffer &v)
+		{
+			v.bg0rom.hBargraph(vec(0,8), progress*128);
+		}
+	}
+	defaultLoadingScreen;
+	LoadingScreen *loadingScreen = &defaultLoadingScreen;
 
 	bool fullRefresh = true;
 
@@ -53,7 +71,6 @@ namespace Scene
 		void detachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
 	}
 	noMotion;
-
 	MotionMapper *motionMapper = &noMotion;
 
 	TimeTicker frameRate(60.0);

@@ -93,23 +93,6 @@ public:
 	}
 };
 
-class SimpleLoadingScreen : public Scene::LoadingScreen
-{
-public:
-	void init(uint8_t cube, Sifteo::VideoBuffer &v)
-	{
-		v.initMode(BG0_ROM);
-	}
-	void onAttach(uint8_t cube, Sifteo::VideoBuffer &v)
-	{
-		v.bg0rom.text(vec(4,7), "loading:", BG0ROMDrawable::GREEN_ON_WHITE);
-	}
-	void update(uint8_t cube, float progress, Sifteo::VideoBuffer &v)
-	{
-		v.bg0rom.hBargraph(vec(0,8), progress*128);
-	}
-};
-
 class SimpleMotionMapper : public Scene::MotionMapper
 {
 public:
@@ -137,8 +120,6 @@ void main()
 	Scene::setModeHandler(smh);
 	SimpleElementHandler seh;
 	Scene::setElementHandler(seh);
-	SimpleLoadingScreen sls;
-	Scene::setLoadingScreen(sls);
 	SimpleMotionMapper smm;
 	Scene::setMotionMapper(smm);
 
