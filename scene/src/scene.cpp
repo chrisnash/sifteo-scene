@@ -550,9 +550,11 @@ namespace Scene
 
 		timeStep.next();									// get a time sample
 		uint8_t fc = frameRate.tick(timeStep.delta());		// figure out how much to advance the clock
+		// log a message if the frame step is too large, we want to see this even if scene logging is disabled
 		if(fc > frameThreshold)
 		{
-			LOG("Unexpected large frame step: %d\n", fc);
+			LOG("SCENE: Unexpected large frame step: %d\n", fc);
+			fc = frameThreshold;							// clamp
 		}
 		int32_t exitCode = 0;
 
