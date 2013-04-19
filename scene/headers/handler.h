@@ -23,6 +23,7 @@ namespace Scene
 		virtual int32_t updateElement(Element &el, uint8_t fc=0) = 0;
 		// callbacks
 		virtual void cubeCount(uint8_t cubes) = 0;
+		virtual void neighborAlert() = 0;
 
 	};
 }

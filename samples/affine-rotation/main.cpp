@@ -102,6 +102,7 @@ public:
 	}
 
 	void cubeCount(uint8_t cubes) {}
+	void neighborAlert() {}
 };
 
 namespace Scene

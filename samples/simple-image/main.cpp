@@ -150,6 +150,11 @@ public:
 	{
 		LOG("Cube count is now %d\n", (int)cubes);
 	}
+
+	void neighborAlert()
+	{
+		LOG("Neighbor state has changed\n");
+	}
 };
 
 class SimpleMotionMapper : public Scene::MotionMapper

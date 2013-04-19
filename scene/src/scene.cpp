@@ -637,7 +637,7 @@ namespace Scene
 		}
 		while(!redraw.empty() || !cubesLoading.empty());
 
-		cubeMapping.refreshState();							// sample motion and neighbor events
+		if(cubeMapping.refreshState()) handler.neighborAlert();							// sample motion and neighbor events
 
 		timeStep.next();									// get a time sample
 		uint8_t fc = frameRate.tick(timeStep.delta());		// figure out how much to advance the clock

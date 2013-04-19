@@ -130,6 +130,7 @@ public:
 	}
 
 	void cubeCount(uint8_t cubes) {}
+	void neighborAlert() {}
 };
 
 class SimpleMotionMapper : public Scene::MotionMapper
