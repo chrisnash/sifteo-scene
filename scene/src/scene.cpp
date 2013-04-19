@@ -152,6 +152,13 @@ namespace Scene
 			return toLogical[physical];
 		}
 
+		uint8_t getCubeCount()
+		{
+			uint8_t i=0;
+			while((i<CUBE_ALLOCATION)&&(toPhysical[i] != CubeID::UNDEFINED)) i++;
+			return i;
+		}
+
 		void detachAllMotion()
 		{
 			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
@@ -345,6 +352,7 @@ namespace Scene
 			cubeMapping.initialize();
 			attentionNeighbors.mark();
 			attentionCubes.mark();
+			cubeMapping.pumpEvents();
 		}
 	}
 	eventHandler;
@@ -553,6 +561,7 @@ namespace Scene
 									Scene::reset();
 									attachPending.clear();
 									todo.clear();
+									handler.cubeCount( cubeMapping.getCubeCount() );
 									break;
 								}
 								loadingScreenPart++;
@@ -602,6 +611,7 @@ namespace Scene
 			if(Scene::paint())
 			{
 				Scene::reset();
+				handler.cubeCount( cubeMapping.getCubeCount() );
 			}
 
 			// check for loading cubes that have finished
@@ -665,8 +675,10 @@ namespace Scene
 
 	int32_t execute(Handler &handler)
 	{
-		// perform an initial event pump
-		cubeMapping.pumpEvents();
+		// make at least one neighbor callback
+		attentionNeighbors.mark();
+		// and make an immediate cube count callback
+		handler.cubeCount( cubeMapping.getCubeCount() );
 
 		int32_t exitCode;
 		while( (exitCode=doRedraw(handler)) == 0);

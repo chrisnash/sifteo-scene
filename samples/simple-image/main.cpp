@@ -145,6 +145,11 @@ public:
 		// maybe someone touched a sully
 		return sullyTouch[el.cube].isTouching() ? (el.cube+1) : 0;
 	}
+
+	void cubeCount(uint8_t cubes)
+	{
+		LOG("Cube count is now %d\n", (int)cubes);
+	}
 };
 
 class SimpleMotionMapper : public Scene::MotionMapper

@@ -100,6 +100,8 @@ public:
 		}
 		return 0;
 	}
+
+	void cubeCount(uint8_t cubes) {}
 };
 
 namespace Scene

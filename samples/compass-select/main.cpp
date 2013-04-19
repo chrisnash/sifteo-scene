@@ -128,6 +128,8 @@ public:
 			return 0;
 		}
 	}
+
+	void cubeCount(uint8_t cubes) {}
 };
 
 class SimpleMotionMapper : public Scene::MotionMapper

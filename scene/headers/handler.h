@@ -12,6 +12,7 @@ namespace Scene
 {
 	class Handler
 	{
+		friend int32_t execute(Handler &h);
 		friend int32_t doRedraw(Handler &h);
 	protected:
 		// mode functions
@@ -20,6 +21,8 @@ namespace Scene
 		// element functions
 		virtual void drawElement(Element &el, Sifteo::VideoBuffer &v) = 0;
 		virtual int32_t updateElement(Element &el, uint8_t fc=0) = 0;
+		// callbacks
+		virtual void cubeCount(uint8_t cubes) = 0;
 
 	};
 }
