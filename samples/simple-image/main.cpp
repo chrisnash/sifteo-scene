@@ -189,10 +189,10 @@ void main()
 	// use the scene builder API
 	Scene::beginScene();
 
-	const char *text_messages[] = {"Cube 1", "Cube 2", "Cube 3"};
+	const char *text_messages[] = {"Cube 1", "Cube 2", "Cube 3", "Cube 4", "Cube 5", "Cube 6"};
 
-	// build three sully elements
-	for(int i=0; i<3; i++)
+	// build sully elements on all the cubes, even the ones you can't see
+	for(int i=0; i<6; i++)
 	{
 		Scene::addElement(0, i,0, Scene::FULL_UPDATE);												// type 0 is the sully item
 		Scene::addElement(1, i,1, Scene::NO_UPDATE, Scene::NO_UPDATE, (void *)text_messages[i]);	// type 1 is the text area
