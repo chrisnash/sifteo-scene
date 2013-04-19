@@ -47,11 +47,12 @@ namespace Scene
 	class DefaultLoadingScreen : public LoadingScreen
 	{
 	public:
-		void init(uint8_t cube, Sifteo::VideoBuffer &v)
+		bool init(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part)
 		{
 			v.initMode(BG0_ROM);
+			return true;	// flag, this is the last part
 		}
-		void onAttach(uint8_t cube, Sifteo::VideoBuffer &v)
+		void onAttach(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part)
 		{
 			v.bg0rom.text(vec(4,7), "loading:", BG0ROMDrawable::GREEN_ON_WHITE);
 		}
@@ -488,9 +489,21 @@ namespace Scene
 						cubesLoading.mark(physical);
 						currentMode = currentModes[cube] = NO_MODE;
 						CubeID(physical).detachVideoBuffer();
-						loadingScreen->init(cube, vid[cube]);
-						vid[cube].attach(physical);
-						loadingScreen->onAttach(cube, vid[cube]);
+
+						// allow for a multimodal loading screen
+						bool loadingScreenReady = false;
+						uint8_t loadingScreenPart = 0;
+						while(!loadingScreenReady)
+						{
+							loadingScreenReady = loadingScreen->init(cube, vid[cube], loadingScreenPart);
+							vid[cube].attach(physical);
+							loadingScreen->onAttach(cube, vid[cube], loadingScreenPart);
+							if(!loadingScreenReady)
+							{
+								System::paint();
+								loadingScreenPart++;
+							}
+						}
 						redraw.mark(i);	// queue this item after at least one loader paint cycle
 					}
 					else

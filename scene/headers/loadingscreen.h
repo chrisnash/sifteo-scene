@@ -14,8 +14,8 @@ namespace Scene
 	{
 		friend int32_t doRedraw(Handler &h);
 	protected:
-		virtual void init(uint8_t cube, Sifteo::VideoBuffer &v) = 0;
-		virtual void onAttach(uint8_t cube, Sifteo::VideoBuffer &v) = 0;
+		virtual bool init(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part) = 0;
+		virtual void onAttach(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part) = 0;
 		virtual void update(uint8_t cube, float progress, Sifteo::VideoBuffer &v) = 0;
 	};
 }
