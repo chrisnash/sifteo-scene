@@ -20,7 +20,6 @@ AssetSlot slot_3 = AssetSlot::allocate();
 class SimpleHandler : public Scene::Handler
 {
 	Sifteo::AssetConfiguration<ASSET_CAPACITY> assetconf;
-	uint8_t sync = 0;
 public:
 	SimpleHandler()
 	{
@@ -37,10 +36,7 @@ public:
 	{
 		// only one mode in this demo
 		v.initMode(BG2);
-		if(cube==1)
-		{
-			Scene::getElement(3).data[0] = 0;	// reset the orientation tracker
-		}
+		setAffine(v, 0);				// make sure the default matrix is set (not all zero!)
 		return true;					// attach immediately
 	}
 
@@ -54,6 +50,57 @@ public:
 		m.translate(-64,-64);		// move it back
 
 		v.bg2.setMatrix( m );
+	}
+
+	void setAffineAndOrientation(Sifteo::VideoBuffer &v, uint16_t angle, uint8_t orientation)
+	{
+		float f = (M_TAU*angle)/65536.0f;
+		AffineMatrix m = AffineMatrix::identity();
+
+		m.translate(64,64);			// move center to origin
+		m.rotate(f);				// do the rotation
+		m.translate(-64,-64);		// move it back
+
+		// this is a low level ABI hack to make sure the affine matrix *and* the orientation change get sent to the cubes in one go. I hope.
+		// note words 0x100-0105 are the rotation words (cm1.8) and word 0x1FF is where the mode change is
+
+		// 1) set lock bits
+		v.lock(0x200);	// 200->20C is the matrix
+		v.lock(0x3FF);	// and this is the orientation flags
+
+		// 2) Update VRAM
+		// :matrix
+        _SYSAffine a = {
+        		 256.0f * m.cx + 0.5f,
+        		 256.0f * m.cy + 0.5f,
+        		 256.0f * m.xx + 0.5f,
+        		 256.0f * m.xy + 0.5f,
+        		 256.0f * m.yx + 0.5f,
+        		 256.0f * m.yy + 0.5f,
+        };
+        Sifteo::memcpy16(&v.sys.vbuf.vram.words[0x100], (const uint16_t *)&a, 6);
+
+        // :rotation
+        const uint32_t sideToRotation =
+        		(ROT_NORMAL     << 0)  |
+        		(ROT_LEFT_90    << 8)  |
+        		(ROT_180        << 16) |
+        		(ROT_RIGHT_90   << 24) ;
+        uint8_t r = sideToRotation >> (orientation * 8);
+        const uint8_t mask = _SYS_VF_XY_SWAP | _SYS_VF_X_FLIP | _SYS_VF_Y_FLIP;
+        uint8_t flags = v.peekb(offsetof(_SYSVideoRAM, flags));
+        // apparently this doesn't come in byte or word flavors, so we do it as a 4 byte blob at the end of memory
+        __sync_xor_and_fetch( ((int32_t*)(&v.sys.vbuf.vram.words)) + 0xFF, ((int32_t)((r ^ flags) & mask))<<24 );
+
+        // 3) set cm1 change bits
+		__sync_or_and_fetch(&v.sys.vbuf.cm1[8], 0xFC000000);
+		__sync_or_and_fetch(&v.sys.vbuf.cm1[15], 0x00000001);
+
+        // 4) set cm16 to get things going
+		__sync_or_and_fetch(&v.sys.vbuf.cm16, 0x00008001);
+
+        // 5) unlock (paint will do this), but let's jump the gun
+		v.unlock();
 	}
 
 	void drawElement(Scene::Element &el, Sifteo::VideoBuffer &v)
@@ -76,38 +123,19 @@ public:
 			// cube begins painting with one downloaded and not the other. We do a cheesy hack here and just call System::finish(), but
 			// really you should be locking memory if you're doing this kind of thing.
 			uint16_t scratch = *pa + 0x2000;
-			// use el.data[0] to determine if the orientation needs to be changed.
-			uint8_t newOrientation = scratch>>14;
-			if(newOrientation != el.data[0])
-			{
-				el.data[0] = newOrientation;
-				System::finish();	// how bad is this? Possibly very.
-				v.setOrientation((Sifteo::Side)newOrientation);
-			}
-			setAffine(v, (scratch & 0x3FFF) - 0x2000);
+			setAffineAndOrientation(v, (scratch & 0x3FFF) - 0x2000, scratch>>14);
 			break;
-		}
-		// we keep track of whether everything has been rendered here. We don't start the animation until both screens have rendered the rotation at least once.
-		sync |= el.type;
-		if(sync==0x03)
-		{
-			//LOG("Animation starting, current angle %d\n", *pa);
-			sync = 0xFF;
 		}
 	}
 	int32_t updateElement(Scene::Element &el, uint8_t fc=0)
 	{
-		// wait until both screens have started their render cycle before we update
-		if(sync==0xFF)
-		{
-			// the only element to update is the rotation. We treat el.object as a 16-bit unsigned for this
-			uint16_t *pa = (uint16_t*)&el.object;				// use the object field as a uint16.
-			(*pa) += fc*0x0100;									// full rotation takes 256 frames
+		// the only element to update is the rotation. We treat el.object as a 16-bit unsigned for this
+		uint16_t *pa = (uint16_t*)&el.object;				// use the object field as a uint16.
+		(*pa) += fc*0x0100;									// full rotation takes 256 frames
 
-			// tell items 2 and 3 (the two rotations) to repaint
-			Scene::getElement(2).repaint();
-			Scene::getElement(3).repaint();
-		}
+		// tell items 2 and 3 (the two rotations) to repaint
+		Scene::getElement(2).repaint();
+		Scene::getElement(3).repaint();
 		return 0;
 	}
 
