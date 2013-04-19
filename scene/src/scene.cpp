@@ -578,9 +578,9 @@ namespace Scene
 				while(ur >= element.update)
 				{
 					ur -= element.update;
+					element.update = element.autoupdate;
 					exitCode = handler.updateElement(element);
 					if(exitCode !=0) return exitCode;
-					element.update = element.autoupdate;
 				}
 				element.update -= ur;
 			}
