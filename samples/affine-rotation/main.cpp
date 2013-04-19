@@ -72,8 +72,14 @@ public:
 			// cube begins painting with one downloaded and not the other. We do a cheesy hack here and just call System::finish(), but
 			// really you should be locking memory if you're doing this kind of thing.
 			uint16_t scratch = *pa + 0x2000;
-			System::finish();	// how bad is this? Possibly very.
-			v.setOrientation((Sifteo::Side)(scratch>>14));
+			// use el.data[0] to determine if the orientation needs to be changed.
+			uint8_t newOrientation = scratch>>14;
+			if(newOrientation != el.data[0])
+			{
+				el.data[0] = newOrientation;
+				System::finish();	// how bad is this? Possibly very.
+				v.setOrientation((Sifteo::Side)newOrientation);
+			}
 			setAffine(v, (scratch & 0x3FFF) - 0x2000);
 			break;
 		}
