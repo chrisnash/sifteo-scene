@@ -17,6 +17,62 @@ AssetSlot slot_1 = AssetSlot::allocate();
 AssetSlot slot_2 = AssetSlot::allocate();
 AssetSlot slot_3 = AssetSlot::allocate();
 
+class FancyLoadingScreen : public Scene::LoadingScreen
+{
+	virtual bool init(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part)
+	{
+		if(part==0)
+		{
+			v.initMode(FB32);
+			RGB565 cyan = RGB565::fromRGB(0x00FFFF);
+			RGB565 green = RGB565::fromRGB(0x00FF00);
+			RGB565 black = RGB565::fromRGB(0x000000);
+
+			// 0-5 6 7-12 (13 colors)
+			// draw a 12 line fade to black from cyan, 8 lines of black, 12 line fade to green
+			for(int i=0; i<6; i++)
+			{
+				int li = (0x00FF * i)/6;
+				v.colormap[i] = cyan.lerp(black, li);
+				v.colormap[12-i] = green.lerp(black, li);
+
+				v.fb32.fill(vec(0,2*i),vec(32,2), i);
+				v.fb32.fill(vec(0,30-2*i),vec(32,2), 12-i);
+			}
+			v.colormap[6] = black;
+			v.fb32.fill(vec(0,12), vec(32,8), 6);
+
+			return false;
+		}
+		else
+		{
+			v.initMode(FB128, 52, 24);	// use a 24 line frame buffer (the 3 black lines in either half of FB32)
+			v.colormap[0] = RGB565::fromRGB(0x000000);	// on black
+			v.colormap[1] = RGB565::fromRGB(0xFFFFFF);	// white
+			Font::drawCentered(v, vec(0,0), vec(128,12), "loading...");
+			// draw a progress bar outline on FB128, lines 14 to 21 inclusive
+			v.fb128.span( vec(2,14), 124, 1);			// top line
+			v.fb128.plot( vec(1,15), 1); v.fb128.plot( vec(126,15), 1);	// corners
+			v.fb128.fill( vec(0,16), vec(1,4), 1); v.fb128.fill( vec(127,16), vec(1,4), 1); // endcaps
+			v.fb128.plot( vec(1,20), 1); v.fb128.plot( vec(126,20), 1);	// corners
+			v.fb128.span( vec(2,21), 124, 1);			// bottom line
+
+			return true;
+		}
+	}
+
+	virtual void onAttach(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part)
+	{
+		// both parts are framebuffered, so nothing to do after attach
+	}
+
+	virtual void update(uint8_t cube, float progress, Sifteo::VideoBuffer &v)
+	{
+		int pg = 126*progress;
+		v.fb128.fill( vec(1,15), vec(pg,6), 1);
+	}
+};
+
 class Debounce
 {
 	CubeID id;
@@ -120,6 +176,8 @@ void main()
 	Scene::initialize();
 	SimpleMotionMapper smm;
 	Scene::setMotionMapper(smm);
+	FancyLoadingScreen fls;
+	Scene::setLoadingScreen(fls);
 
 	SimpleHandler sh;
 
