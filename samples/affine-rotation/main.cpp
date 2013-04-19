@@ -37,6 +37,10 @@ public:
 	{
 		// only one mode in this demo
 		v.initMode(BG2);
+		if(cube==1)
+		{
+			Scene::getElement(3).data[0] = 0;	// reset the orientation tracker
+		}
 		return true;					// attach immediately
 	}
 
