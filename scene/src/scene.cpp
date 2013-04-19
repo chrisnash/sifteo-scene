@@ -327,8 +327,9 @@ namespace Scene
 		}
 		void onNeighborChange(unsigned id1, unsigned side1, unsigned id2, unsigned side2)
 		{
-			attentionNeighbors.mark(id1);
-			attentionNeighbors.mark(id2);
+			// protect against neighboring the base
+			if(id1<CUBE_ALLOCATION) attentionNeighbors.mark(id1);
+			if(id2<CUBE_ALLOCATION) attentionNeighbors.mark(id2);
 		}
 
 		void initialize()
