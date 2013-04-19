@@ -16,7 +16,7 @@ namespace Scene
 	uint64_t timestamp;
 	bool scenetime = false;
 #define START_TIMER if(scenetime) timestamp = SystemTime::now().uptimeNS();
-#define END_TIMER if(scenetime) {uint64_t t = SystemTime::now().uptimeNS()-timestamp; SCENELOG("SCENE: elapsed time %uns\n", (uint32_t)t);}
+#define END_TIMER if(scenetime) {uint64_t t = SystemTime::now().uptimeNS()-timestamp; SCENELOG("SCENE: elapsed time %uus\n", (uint32_t)(t/1000));}
 
 	// the items that need a redraw now
 	BitArray<SCENE_MAX_SIZE> redraw;
