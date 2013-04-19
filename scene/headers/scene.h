@@ -41,6 +41,11 @@ namespace Scene
 	void close();
 
 	Element &getElement(uint16_t index);
+
+	// yielding system call traps.
+	bool paint();
+	bool paintUnlimited();
+	bool yield();
 }
 
 #endif /* SCENE_H_ */

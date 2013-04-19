@@ -23,6 +23,8 @@ namespace Scene
 	// the items that need a redraw in order to do a full render
 	BitArray<SCENE_MAX_SIZE> initialDraw;
 
+	bool resetEvent;
+
 	// current cube modes
 	uint8_t currentModes[CUBE_ALLOCATION];
 
@@ -39,6 +41,7 @@ namespace Scene
 
 	// Asset loader
 	AssetLoader assetLoader;
+	BitArray<CUBE_ALLOCATION> cubesLoading(0,0);	// nothing set
 
 	// The frame threshold. Log a warning if the update counter is too large.
 	// The default value effectively disables this test.
@@ -64,10 +67,8 @@ namespace Scene
 	defaultLoadingScreen;
 	LoadingScreen *loadingScreen = &defaultLoadingScreen;
 
-	bool fullRefresh = true;
-
-	CubeSet attentionCubes;
-	CubeSet attentionNeighbors;
+	BitArray<CUBE_ALLOCATION> attentionCubes(0,0);
+	BitArray<CUBE_ALLOCATION> attentionNeighbors(0,0);
 
 	Neighborhood neighborhoods[CUBE_ALLOCATION];
 
@@ -256,7 +257,18 @@ namespace Scene
 			return true;
 		}
 
-		void refresh()
+		bool refreshState()
+		{
+			updateAllMotion();
+			if(!attentionNeighbors.empty())
+			{
+				refreshNeighbors();
+				return true;
+			}
+			return false;
+		}
+
+		bool pumpEvents()
 		{
 			if(!attentionCubes.empty())
 			{
@@ -269,26 +281,31 @@ namespace Scene
 						// cube is connected
 						if(allocate(i))
 						{
-							fullRefresh = true;
+							SCENELOG("SCENE: new allocation of cube %d\n", i);
+							resetEvent = true;
 						}
 					}
 					else
 					{
 						// cube is not connected
-						CubeID(i).detachVideoBuffer();
 						if(deallocate(i))
 						{
-							fullRefresh = true;
+							SCENELOG("SCENE: deallocation of cube %d\n", i);
+							resetEvent = true;
 						}
 					}
 				}
 			}
-
-			if(!attentionNeighbors.empty())
+			if(resetEvent)
 			{
-				refreshNeighbors();
+				SCENELOG("SCENE: detaching all video\n");
+				// detach all the video buffers. Yes, I'm serious
+				for(uint8_t i=0; i<CUBE_ALLOCATION; i++)
+				{
+					CubeID(i).detachVideoBuffer();
+				}
 			}
-			updateAllMotion();
+			return resetEvent;
 		}
 	}
 	cubeMapping;
@@ -299,7 +316,9 @@ namespace Scene
 	public:
 		void onCubeRefresh(unsigned cubeID)
 		{
-			fullRefresh = true;
+			// for the moment, just do a hard reset of the scene when this event arrives
+			// we may get better granularity later.
+			resetEvent = true;
 		}
 		void onCubeChange(unsigned cubeID)
 		{
@@ -316,17 +335,54 @@ namespace Scene
 		{
 			Sifteo::Events::cubeRefresh.set(&EventHandler::onCubeRefresh, this);
 
-			cubeMapping.initialize();
-			attentionNeighbors = attentionCubes = CubeSet::connected();
-
 			Sifteo::Events::cubeConnect.set(&EventHandler::onCubeChange, this);
 			Sifteo::Events::cubeDisconnect.set(&EventHandler::onCubeChange, this);
 
 			Sifteo::Events::neighborAdd.set(&EventHandler::onNeighborChange, this);
 			Sifteo::Events::neighborRemove.set(&EventHandler::onNeighborChange, this);
+
+			cubeMapping.initialize();
+			attentionNeighbors.mark();
+			attentionCubes.mark();
 		}
 	}
 	eventHandler;
+
+	bool paint()
+	{
+		resetEvent = false;
+		System::paint();
+		return cubeMapping.pumpEvents();
+	}
+
+	bool paintUnlimited()
+	{
+		resetEvent = false;
+		System::paintUnlimited();
+		return cubeMapping.pumpEvents();
+	}
+
+	bool yield()
+	{
+		resetEvent = false;
+		System::yield();
+		timeStep.next();
+		return cubeMapping.pumpEvents();
+	}
+
+	void reset()
+	{
+		// hard cancel any in-progress loaders
+		if(!cubesLoading.empty())
+		{
+			assetLoader.cancel();
+			cubesLoading.clear();
+		}
+		// perform a full reset of the scene
+		redraw = initialDraw;
+		for(uint8_t i=0; i<CUBE_ALLOCATION; i++) currentModes[i] = NO_MODE;
+		attentionNeighbors.mark();
+	}
 
 	void initialize()
 	{
@@ -340,7 +396,6 @@ namespace Scene
 
 	void setMotionMapper(MotionMapper &p)
 	{
-		cubeMapping.refresh();
 		cubeMapping.detachAllMotion();
 		motionMapper = &p;
 		cubeMapping.attachAllMotion();
@@ -360,6 +415,7 @@ namespace Scene
 	{
 		scenePointer = sceneBuffer;
 		initialDraw = BitArray<SCENE_MAX_SIZE>(0,0);
+		reset();
 	}
 
 	void addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update, uint8_t autoupdate, void *object)
@@ -375,6 +431,7 @@ namespace Scene
 		else
 		{
 			initialDraw.mark(sceneIndex);
+			redraw.mark(sceneIndex);
 		}
 		scenePointer->cube = cube;
 		elementModes[sceneIndex] = mode;
@@ -385,24 +442,15 @@ namespace Scene
 		scenePointer++;
 	}
 
+	// this will likely be deprecated shortly
 	void endScene()
 	{
 		sceneSize = scenePointer - sceneBuffer;
-		fullRefresh = true;
 	}
 
 	int32_t doRedraw(Handler &handler)
 	{
 		ASSERT(loadingScreen != 0);
-
-		cubeMapping.refresh();
-
-		if(fullRefresh)
-		{
-			redraw = initialDraw;
-			for(uint8_t i=0; i<CUBE_ALLOCATION; i++) currentModes[i] = NO_MODE;
-			fullRefresh = false;
-		}
 
 		// the redraw loop goes thru all elements whose redraw flag is set.
 		// if the mode matches, then that element can be drawn. Otherwise we need to consider
@@ -414,8 +462,6 @@ namespace Scene
 		// is required, then we best look for any other cubes that need a download too. Basically though
 		// we do as much as is possible, and in a panic we just set that bit for the next pass. Note there's
 		// nothing to stop us drawing on other cubes if one is downloading ;)
-
-		BitArray<CUBE_ALLOCATION> cubesLoading(0,0);	// nothing set
 
 		// for at least one paint cycle
 		do
@@ -500,7 +546,14 @@ namespace Scene
 							loadingScreen->onAttach(cube, vid[cube], loadingScreenPart);
 							if(!loadingScreenReady)
 							{
-								System::paint();
+								if(Scene::paintUnlimited())
+								{
+									// hard abort this loop
+									Scene::reset();
+									attachPending.clear();
+									todo.clear();
+									break;
+								}
 								loadingScreenPart++;
 							}
 						}
@@ -544,28 +597,36 @@ namespace Scene
 				vid[cube].attach(physical);
 			}
 
-			// yield a while
-			System::paint();
+			// yield a while (in indeterminate state)
+			if(Scene::paint())
+			{
+				Scene::reset();
+			}
 
 			// check for loading cubes that have finished
-			for(uint8_t i : cubesLoading)
+			if(!cubesLoading.empty())
 			{
-				float progress = assetLoader.cubeProgress(i);
-				uint8_t logical = cubeMapping.logical(i);
-				loadingScreen->update(logical, progress, vid[logical]);
-				if(assetLoader.isComplete(i))
+				for(uint8_t i : cubesLoading)
 				{
-					SCENELOG("SCENE: Completed download to cube %d\n", i);
-					cubesLoading.clear(i);
-					timeStep.next();			// reset the frame clock
+					float progress = assetLoader.cubeProgress(i);
+					uint8_t logical = cubeMapping.logical(i);
+					loadingScreen->update(logical, progress, vid[logical]);
+					if(assetLoader.isComplete(i))
+					{
+						SCENELOG("SCENE: Completed download to cube %d\n", i);
+						cubesLoading.clear(i);
+						timeStep.next();			// reset the frame clock
+					}
 				}
-			}
-			if(cubesLoading.empty())
-			{
-				assetLoader.finish();
+				if(cubesLoading.empty())
+				{
+					assetLoader.finish();
+				}
 			}
 		}
 		while(!redraw.empty() || !cubesLoading.empty());
+
+		cubeMapping.refreshState();							// sample motion and neighbor events
 
 		timeStep.next();									// get a time sample
 		uint8_t fc = frameRate.tick(timeStep.delta());		// figure out how much to advance the clock
@@ -603,14 +664,17 @@ namespace Scene
 
 	int32_t execute(Handler &handler)
 	{
+		// perform an initial event pump
+		cubeMapping.pumpEvents();
+
 		int32_t exitCode;
 		while( (exitCode=doRedraw(handler)) == 0);
 		return exitCode;
 	}
 
+	// will also likely depreacte this
 	void close()
 	{
-		cubeMapping.refresh();
 		cubeMapping.detachAllVideo();
 		sceneSize = 0;
 	}
