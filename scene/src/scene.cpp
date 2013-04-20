@@ -658,17 +658,23 @@ namespace Scene
 				exitCode = handler.updateElement(element, fc);
 				if(exitCode !=0) return exitCode;
 			}
-			else if(element.update != 0)
+			else
 			{
 				uint8_t ur = fc;
-				while(ur >= element.update)
+				while((ur > 0) && (element.update>0))
 				{
-					ur -= element.update;
-					element.update = element.autoupdate;
-					exitCode = handler.updateElement(element);
-					if(exitCode !=0) return exitCode;
+					if(ur >= element.update)
+					{
+						ur -= element.update;
+						element.update = element.autoupdate;
+						exitCode = handler.updateElement(element);
+						if(exitCode !=0) return exitCode;
+					}
+					else
+					{
+						element.update -= ur;
+					}
 				}
-				element.update -= ur;
 			}
 		}
 		return 0;
