@@ -1,0 +1,2 @@
+-- simple-image demo for the Sifteo scene library
+-- there's nothing for this one :)

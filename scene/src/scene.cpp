@@ -655,6 +655,7 @@ namespace Scene
 			Element &element = sceneBuffer[i];
 			if(element.update == Scene::FULL_UPDATE)
 			{
+				SCENELOG("SCENE: full update, element %d\n", i);
 				exitCode = handler.updateElement(element, fc);
 				if(exitCode !=0) return exitCode;
 			}
@@ -667,6 +668,7 @@ namespace Scene
 					{
 						ur -= element.update;
 						element.update = element.autoupdate;
+						SCENELOG("SCENE: firing update, element %d\n", i);
 						exitCode = handler.updateElement(element);
 						if(exitCode !=0) return exitCode;
 					}
@@ -698,6 +700,18 @@ namespace Scene
 		cubeMapping.detachAllVideo();
 		sceneSize = 0;
 	}
+
+	bool neighborAt(uint8_t cube, uint8_t side, uint8_t &otherCube, uint8_t &otherSide)
+	{
+		otherCube = CubeID::UNDEFINED;	// make the neighbor utility run in 'side is known' mode
+		bool rv = cubeMapping.neighborUtility(cube, side, otherCube, otherSide);
+		if(!rv)
+		{
+			otherCube = otherSide = CubeID::UNDEFINED;
+		}
+		return rv;
+	}
+
 
 	Element &getElement(uint16_t index)
 	{

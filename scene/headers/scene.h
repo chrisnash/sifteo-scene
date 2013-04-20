@@ -42,6 +42,8 @@ namespace Scene
 
 	Element &getElement(uint16_t index);
 
+	bool neighborAt(uint8_t cube, uint8_t side, uint8_t &otherCube, uint8_t &otherSide);
+
 	// yielding system call traps.
 	bool paint();
 	bool paintUnlimited();
