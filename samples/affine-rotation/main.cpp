@@ -172,8 +172,6 @@ void main()
 	Scene::addElement(1, 0,0, Scene::NO_UPDATE);			// the affine matrix renderer on cube 0
 	Scene::addElement(2, 1,0, Scene::NO_UPDATE);			// the affine matrix renderer on cube 1
 
-	Scene::endScene();			// complete the scene build
-
 	while(1)
 	{
 		int32_t code = Scene::execute(sh);			// this call never returns because we have no update methods.

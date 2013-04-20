@@ -203,8 +203,6 @@ void main()
 		Scene::addElement(1, i,1, Scene::NO_UPDATE, Scene::NO_UPDATE, (void *)text_messages[i]);	// type 1 is the text area
 	}
 
-	Scene::endScene();			// complete the scene build
-
 	while(1)
 	{
 		int32_t code = Scene::execute(sh);			// this call never returns because we have no update methods.

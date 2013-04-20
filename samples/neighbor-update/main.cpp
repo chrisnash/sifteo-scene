@@ -119,8 +119,6 @@ void main()
 		}
 	}
 
-	Scene::endScene();			// complete the scene build
-
 	while(1)
 	{
 		int32_t code = Scene::execute(sh);			// this call never returns because we have no update methods.

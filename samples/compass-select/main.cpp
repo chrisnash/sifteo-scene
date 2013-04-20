@@ -198,7 +198,6 @@ void main()
 		Scene::addElement(1, 0,i+1, Scene::NO_UPDATE, Scene::NO_UPDATE, (void *)text_messages[i]);	// type 1 cube 0 modes 1-4
 		Scene::addElement(2, 0,i+1, 0, 8, (void *)(changers + i));									// color changers are not running initially
 	}
-	Scene::endScene();			// complete the scene build
 
 	while(1)
 	{

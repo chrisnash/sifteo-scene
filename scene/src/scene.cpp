@@ -28,8 +28,6 @@ namespace Scene
 	// current cube modes
 	uint8_t currentModes[CUBE_ALLOCATION];
 
-	// the current scene builder pointer
-	Element *scenePointer;
 	// the current scene size
 	uint16_t sceneSize;
 	// the scene buffer available to build scenes on the fly
@@ -422,40 +420,33 @@ namespace Scene
 
 	void beginScene()
 	{
-		scenePointer = sceneBuffer;
+		sceneSize = 0;
 		initialDraw = BitArray<SCENE_MAX_SIZE>(0,0);
 		reset();
 	}
 
 	uint16_t addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update, uint8_t autoupdate, void *object)
 	{
-		uint16_t sceneIndex = scenePointer - sceneBuffer;
-		ASSERT(sceneIndex < SCENE_MAX_SIZE);
+		ASSERT(sceneSize < SCENE_MAX_SIZE);
+		Element &el = sceneBuffer[sceneSize];
 
-		scenePointer->type = type;
+		el.type = type;
 		if(cube & Scene::HIDE)
 		{
 			cube &= ~Scene::HIDE;
 		}
 		else
 		{
-			initialDraw.mark(sceneIndex);
-			redraw.mark(sceneIndex);
+			initialDraw.mark(sceneSize);
+			redraw.mark(sceneSize);
 		}
-		scenePointer->cube = cube;
-		elementModes[sceneIndex] = mode;
-		scenePointer->update = update;
-		scenePointer->autoupdate = autoupdate;
-		scenePointer->object = object;
+		el.cube = cube;
+		elementModes[sceneSize] = mode;
+		el.update = update;
+		el.autoupdate = autoupdate;
+		el.object = object;
 
-		scenePointer++;
-		return sceneIndex;
-	}
-
-	// this will likely be deprecated shortly
-	void endScene()
-	{
-		sceneSize = scenePointer - sceneBuffer;
+		return sceneSize++;
 	}
 
 	int32_t doRedraw(Handler &handler)
@@ -692,13 +683,6 @@ namespace Scene
 		int32_t exitCode;
 		while( (exitCode=doRedraw(handler)) == 0);
 		return exitCode;
-	}
-
-	// will also likely depreacte this
-	void close()
-	{
-		cubeMapping.detachAllVideo();
-		sceneSize = 0;
 	}
 
 	bool neighborAt(uint8_t cube, uint8_t side, uint8_t &otherCube, uint8_t &otherSide)
