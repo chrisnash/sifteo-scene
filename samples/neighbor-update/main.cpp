@@ -88,24 +88,15 @@ public:
 
 	void neighborAlert()
 	{
-		LOG("neighbor alert\n");
 		for(int i=0; i<12; i++)
 		{
 			Scene::getElement(neighborBase + i).setUpdate();
 		}
-		LOG("neighbor alert handled\n");
 	}
 };
 
-namespace Scene
-{
-extern bool scenelog;
-}
-
 void main()
 {
-	Scene::scenelog = true;
-
 	// initialize scene
 	Scene::initialize();
 	SimpleHandler sh;
