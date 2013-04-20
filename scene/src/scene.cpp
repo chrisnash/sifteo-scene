@@ -427,7 +427,7 @@ namespace Scene
 		reset();
 	}
 
-	void addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update, uint8_t autoupdate, void *object)
+	uint16_t addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update, uint8_t autoupdate, void *object)
 	{
 		uint16_t sceneIndex = scenePointer - sceneBuffer;
 		ASSERT(sceneIndex < SCENE_MAX_SIZE);
@@ -449,6 +449,7 @@ namespace Scene
 		scenePointer->object = object;
 
 		scenePointer++;
+		return sceneIndex;
 	}
 
 	// this will likely be deprecated shortly
