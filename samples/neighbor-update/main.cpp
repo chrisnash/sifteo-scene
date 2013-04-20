@@ -6,7 +6,7 @@ using namespace Sifteo;
 
 static Metadata M = Metadata()
     .title("neighbor-update")
-    .package("com.github.sifteo-scene.simple-image", "0.1")
+    .package("com.github.sifteo-scene.neighbor-update", "0.1")
 //    .icon(Icon)
     .cubeRange(1, CUBE_ALLOCATION);
 
