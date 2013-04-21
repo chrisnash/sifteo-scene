@@ -28,6 +28,8 @@ float vision = 100.0;	// is this smart enough
 
 uint16_t ballElement;
 uint16_t ballSlave;
+uint16_t bat0element;
+uint16_t bat1element;
 
 Sifteo::Random rng;
 
@@ -91,7 +93,7 @@ public:
 				BallObj &ball = *((BallObj*)(Scene::getElement(ballElement).object));
 				float xmin = ((el.cube==0) ? 0.0f : 128.0) - ballRadius;
 				float xmax = ((el.cube==0) ? 128.0f : 256.0) + ballRadius;
-				if((ball.x >- xmin) && (ball.x <= xmax))
+				if((ball.x >- xmin) && (ball.x <= xmax) && (ball.server==2) )
 				{
 					int x = round(ball.x - xmin - 2*ballRadius);
 					int y = round(ball.y - ballRadius);
@@ -135,49 +137,62 @@ public:
 		case 1: // ball
 			{
 				BallObj &ball = *((BallObj*)el.object);
-				float xv, yv;
-				int a = ball.angle;
-				xvyv(a, xv, yv);
-				// bounce of left and right edges
-				// left
-				if( (ball.x < batWidth + ballRadius) && (xv<0.0))
+				if(ball.server !=2)
 				{
-					// hit bat
-					a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
-					// angle must be between -9 and 9
-					if(a>=36)
+					// ready to serve the ball
+					Bat &bat= *((Bat *)(Scene::getElement((ball.server==0)?bat0element:bat1element).object));
+					ball.x = (ball.server==0) ? (ballRadius + batWidth) : (256.0 - ballRadius - batWidth);
+					ball.y = bat.y;
+					// -9 +9
+					ball.angle = Sifteo::umod( ((ball.server==0)?0:36) + rng.randint(0,9)*2 - 9,72);
+					ball.server = 2;
+					el.setUpdate(Scene::FULL_UPDATE);
+				}
+				else
+				{
+					float xv, yv;
+					int a = ball.angle;
+					xvyv(a, xv, yv);
+					// bounce of left and right edges
+					// left
+					if( (ball.x < batWidth + ballRadius) && (xv<0.0))
 					{
-						if(a<63) a=63;
+						// hit bat
+						a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
+						// angle must be between -9 and 9
+						if(a>=36)
+						{
+							if(a<63) a=63;
+						}
+						else
+						{
+							if(a>9) a=9;
+						}
+						xvyv(a, xv, yv);
 					}
-					else
+					else if( (ball.x > 256.0 - batWidth - ballRadius) && (xv>0.0) )
 					{
-						if(a>9) a=9;
+						a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
+						// between 27 and 45
+						if(a<27) a = 27;
+						if(a>45) a = 45;
+						xvyv(a, xv, yv);
 					}
-					xvyv(a, xv, yv);
-				}
-				else if( (ball.x > 256.0 - batWidth - ballRadius) && (xv>0.0) )
-				{
-					a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
-					// between 27 and 45
-					if(a<27) a = 27;
-					if(a>45) a = 45;
-					xvyv(a, xv, yv);
-				}
 
-				if( (ball.y<wallWidth+ballRadius) && (yv<0.0) )
-				{
-					a = Sifteo::umod(-a,72);
-					xvyv(a, xv, yv);
+					if( (ball.y<wallWidth+ballRadius) && (yv<0.0) )
+					{
+						a = Sifteo::umod(-a,72);
+						xvyv(a, xv, yv);
+					}
+					if( (ball.y>128.0-wallWidth-ballRadius) && (yv>0.0) )
+					{
+						a = Sifteo::umod(-a,72);
+						xvyv(a, xv, yv);
+					}
+					ball.angle = a;
+					ball.x += xv;
+					ball.y += yv;
 				}
-				if( (ball.y>128.0-wallWidth-ballRadius) && (yv>0.0) )
-				{
-					a = Sifteo::umod(-a,72);
-					xvyv(a, xv, yv);
-				}
-				ball.angle = a;
-				ball.x += xv;
-				ball.y += yv;
-
 				el.repaint();
 				Scene::getElement(ballSlave).repaint();
 			}
@@ -185,16 +200,19 @@ public:
 		case 2: // bat
 			{
 				BallObj &ball = *((BallObj*)(Scene::getElement(ballElement).object));
-				Bat &bat = *((Bat*)el.object);
-				float batx = (el.cube == 0) ? 0.0f : 256.0f;
-				if(abs(ball.x - batx) < vision)
+				if(ball.server == 2)	// only if the ball is in play
 				{
-					// move the bat
-					if(bat.y < ball.y - batCloseness) bat.y += batVelocity;
-					else if(bat.y > ball.y + batCloseness) bat.y -= batVelocity;
-					if(bat.y < wallWidth + batLength/2) bat.y = wallWidth + batLength/2;
-					if(bat.y > 128.0 - wallWidth - batLength/2) bat.y = 128.0 - wallWidth - batLength/2;
-					el.repaint();
+					Bat &bat = *((Bat*)el.object);
+					float batx = (el.cube == 0) ? 0.0f : 256.0f;
+					if(abs(ball.x - batx) < vision)
+					{
+						// move the bat
+						if(bat.y < ball.y - batCloseness) bat.y += batVelocity;
+						else if(bat.y > ball.y + batCloseness) bat.y -= batVelocity;
+						if(bat.y < wallWidth + batLength/2) bat.y = wallWidth + batLength/2;
+						if(bat.y > 128.0 - wallWidth - batLength/2) bat.y = 128.0 - wallWidth - batLength/2;
+						el.repaint();
+					}
 				}
 			}
 			break;
@@ -225,18 +243,15 @@ void main()
 
 	// ball
 	BallObj ballobj;
-	ballobj.x = 64.0;
-	ballobj.y = 64.0;
-	ballobj.server = 2;	// already in play
-	ballobj.angle = 1;	// 5 degrees south
-	ballElement = Scene::addElement(1,	0,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &ballobj);
+	ballobj.server = 0;	// player 1 will serve in 25 frames
+	ballElement = Scene::addElement(1,	0,0, 25, Scene::NO_UPDATE, &ballobj);
 	ballSlave = Scene::addElement(1,	1,0);
 
 	// bat
 	Bat bat1; bat1.y = 64.0;
 	Bat bat2; bat2.y = 64.0;
-	Scene::addElement(2,	0,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &bat1);
-	Scene::addElement(2,	1,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &bat2);
+	bat0element = Scene::addElement(2,	0,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &bat1);
+	bat1element = Scene::addElement(2,	1,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &bat2);
 
 	// score
 	Scene::addElement(3,	0,0);
