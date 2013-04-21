@@ -22,6 +22,9 @@ float batWidth = 4.0;
 float batLength = 16.0;
 float ballVelocity = 2.0;
 float wallWidth = 4.0;
+float batVelocity = 1.0;
+float batCloseness = 4.0;
+float vision = 80.0;
 
 uint16_t ballElement;
 uint16_t ballSlave;
@@ -166,6 +169,20 @@ public:
 			}
 			break;
 		case 2: // bat
+			{
+				BallObj &ball = *((BallObj*)(Scene::getElement(ballElement).object));
+				Bat &bat = *((Bat*)el.object);
+				float batx = (el.cube == 0) ? 0.0f : 256.0f;
+				if(abs(ball.x - batx) < vision)
+				{
+					// move the bat
+					if(bat.y < ball.y - batCloseness) bat.y += batVelocity;
+					else if(bat.y > ball.y + batCloseness) bat.y -= batVelocity;
+					if(bat.y < wallWidth + batLength/2) bat.y = wallWidth + batLength/2;
+					if(bat.y > 128.0 - wallWidth - batLength/2) bat.y = 128.0 - wallWidth - batLength/2;
+					el.repaint();
+				}
+			}
 			break;
 		case 4:	// game over
 			break;
