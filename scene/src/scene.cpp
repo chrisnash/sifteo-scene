@@ -644,29 +644,27 @@ namespace Scene
 		for(uint16_t i = 0; (i<sceneSize); i++)
 		{
 			Element &element = sceneBuffer[i];
-			if(element.update == Scene::FULL_UPDATE)
+			uint8_t ur = fc;
+			while((ur > 0) && (element.update>0))
 			{
-				SCENELOG("SCENE: full update, element %d\n", i);
-				exitCode = handler.updateElement(element, fc);
-				if(exitCode !=0) return exitCode;
-			}
-			else
-			{
-				uint8_t ur = fc;
-				while((ur > 0) && (element.update>0))
+				if(element.update == Scene::FULL_UPDATE)
 				{
-					if(ur >= element.update)
-					{
-						ur -= element.update;
-						element.update = element.autoupdate;
-						SCENELOG("SCENE: firing update, element %d\n", i);
-						exitCode = handler.updateElement(element);
-						if(exitCode !=0) return exitCode;
-					}
-					else
-					{
-						element.update -= ur;
-					}
+					SCENELOG("SCENE: full update, element %d\n", i);
+					exitCode = handler.updateElement(element, ur);
+					ur = 0;
+					if(exitCode !=0) return exitCode;
+				}
+				else if(ur >= element.update)
+				{
+					ur -= element.update;
+					element.update = element.autoupdate;
+					SCENELOG("SCENE: firing update, element %d\n", i);
+					exitCode = handler.updateElement(element);
+					if(exitCode !=0) return exitCode;
+				}
+				else
+				{
+					element.update -= ur;
 				}
 			}
 		}
