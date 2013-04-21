@@ -20,8 +20,11 @@ AssetSlot slot_3 = AssetSlot::allocate();
 float ballRadius = 2.0;
 float batWidth = 4.0;
 float batLength = 16.0;
+float ballVelocity = 2.0;
+float wallWidth = 4.0;
 
 uint16_t ballElement;
+uint16_t ballSlave;
 
 class BallObj
 {
@@ -29,6 +32,7 @@ public:
 	float x;
 	float y;
 	uint8_t angle;	// multiple of 5 degrees
+	uint8_t server;
 };
 
 class Bat
@@ -78,6 +82,22 @@ public:
 			v.bg0.image(vec(0,0), Board, el.cube);		// frame number is cube
 			break;
 		case 1: // ball
+			{
+				BallObj &ball = *((BallObj*)(Scene::getElement(ballElement).object));
+				float xmin = ((el.cube==0) ? 0.0f : 128.0) - ballRadius;
+				float xmax = ((el.cube==0) ? 128.0f : 256.0) + ballRadius;
+				if((ball.x >- xmin) && (ball.x <= xmax))
+				{
+					int x = round(ball.x - xmin - 2*ballRadius);
+					int y = round(ball.y - ballRadius);
+					v.sprites[0].setImage(Ball);
+					v.sprites[0].move(vec(x,y));
+				}
+				else
+				{
+					v.sprites[0].hide();
+				}
+			}
 			break;
 		case 2: // bat
 			{
@@ -95,11 +115,55 @@ public:
 			break;
 		}
 	}
+
+	void xvyv(int a, float &xv, float &yv)
+	{
+		int angle = (8192*a + 36)/72;
+		int s = Sifteo::tsini(angle); int c = Sifteo::tcosi(angle);
+		xv = (ballVelocity*c)/65536; yv = (ballVelocity*s)/65536;
+	}
+
 	int32_t updateElement(Scene::Element &el, uint8_t fc=0)
 	{
 		switch(el.type)
 		{
 		case 1: // ball
+			{
+				BallObj &ball = *((BallObj*)el.object);
+				float xv, yv;
+				int a = ball.angle;
+				xvyv(a, xv, yv);
+				// bounce of left and right edges
+				// left
+				if( (ball.x < batWidth + ballRadius) && (xv<0.0))
+				{
+					// hit bat
+					a = Sifteo::umod(36-a,72);
+					xvyv(a, xv, yv);
+				}
+				else if( (ball.x > 256.0 - batWidth - ballRadius) && (xv>0.0) )
+				{
+					a = Sifteo::umod(36-a,72);
+					xvyv(a, xv, yv);
+				}
+
+				if( (ball.y<wallWidth+ballRadius) && (yv<0.0) )
+				{
+					a = Sifteo::umod(-a,72);
+					xvyv(a, xv, yv);
+				}
+				if( (ball.y>128.0-wallWidth-ballRadius) && (yv>0.0) )
+				{
+					a = Sifteo::umod(-a,72);
+					xvyv(a, xv, yv);
+				}
+				ball.angle = a;
+				ball.x += xv;
+				ball.y += yv;
+
+				el.repaint();
+				Scene::getElement(ballSlave).repaint();
+			}
 			break;
 		case 2: // bat
 			break;
@@ -132,9 +196,10 @@ void main()
 	BallObj ballobj;
 	ballobj.x = 64.0;
 	ballobj.y = 64.0;
+	ballobj.server = 2;	// already in play
 	ballobj.angle = 1;	// 5 degrees south
 	ballElement = Scene::addElement(1,	0,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &ballobj);
-	Scene::addElement(1,	1,0);
+	ballSlave = Scene::addElement(1,	1,0);
 
 	// bat
 	Bat bat1; bat1.y = 64.0;
