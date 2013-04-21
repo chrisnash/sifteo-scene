@@ -24,10 +24,12 @@ float ballVelocity = 2.0;
 float wallWidth = 4.0;
 float batVelocity = 1.0;
 float batCloseness = 4.0;
-float vision = 80.0;
+float vision = 100.0;	// is this smart enough
 
 uint16_t ballElement;
 uint16_t ballSlave;
+
+Sifteo::Random rng;
 
 class BallObj
 {
@@ -141,12 +143,24 @@ public:
 				if( (ball.x < batWidth + ballRadius) && (xv<0.0))
 				{
 					// hit bat
-					a = Sifteo::umod(36-a,72);
+					a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
+					// angle must be between -9 and 9
+					if(a>=36)
+					{
+						if(a<63) a=63;
+					}
+					else
+					{
+						if(a>9) a=9;
+					}
 					xvyv(a, xv, yv);
 				}
 				else if( (ball.x > 256.0 - batWidth - ballRadius) && (xv>0.0) )
 				{
-					a = Sifteo::umod(36-a,72);
+					a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
+					// between 27 and 45
+					if(a<27) a = 27;
+					if(a>45) a = 45;
 					xvyv(a, xv, yv);
 				}
 
