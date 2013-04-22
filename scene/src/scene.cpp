@@ -342,7 +342,6 @@ namespace Scene
 		cubeMapping.attachAllMotion();
 		attentionNeighbors.mark();
 		timeStep.next();
-		resetEvent = false;	// clear the pending reset flag
 	}
 
 	void initialize()
@@ -559,6 +558,7 @@ namespace Scene
 			{
 				Scene::reset();
 				handler.cubeCount( cubeMapping.getCubeCount() );
+				resetEvent = false;	// mark reset event as correctly handled
 			}
 
 			// check for loading cubes that have finished
