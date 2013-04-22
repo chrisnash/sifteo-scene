@@ -568,12 +568,12 @@ namespace Scene
 					{
 						// ok to perform the mode switch, and may as well attach right now
 						SCENELOG("SCENE: Mode switch of cube %d\n", cube);
-						SCENELOG("Detach old\n");
+						SCENELOG("SCENE: Detach old\n");
 						START_TIMER;
 						CubeID(physical).detachVideoBuffer();
 						END_TIMER;
 						// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
-						SCENELOG("Attach new\n");
+						SCENELOG("SCENE: Attach new\n");
 						START_TIMER;
 						bool attachNow = handler.switchMode(cube, elementMode, vid[cube]);
 						currentMode = currentModes[cube] = elementMode;
@@ -588,7 +588,7 @@ namespace Scene
 						END_TIMER;
 						// on a mode switch, any active objects in this mode on this cube need to be redrawn ASAP
 						// for the moment, loop through all items to find matches.
-						SCENELOG("Refresh redraw list\n");
+						SCENELOG("SCENE: Refresh redraw list\n");
 						START_TIMER;
 						for(unsigned j : initialDraw)
 						{
