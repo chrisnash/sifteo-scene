@@ -44,8 +44,6 @@ namespace Scene
 
 	// yielding system call traps.
 	bool paint();
-	bool paintUnlimited();
-	bool yield();
 }
 
 #endif /* SCENE_H_ */

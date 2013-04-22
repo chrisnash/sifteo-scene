@@ -81,20 +81,19 @@ public:
 	void setCube(CubeID c)
 	{
 		id = c;
-		debounce = (id !=CubeID::UNDEFINED) ? id.isTouching() : false;
+		debounce = id.isTouching();
 	}
 
 	bool isTouching()
 	{
-		if(id == CubeID::UNDEFINED) return false;
-
 		bool now = id.isTouching();
 		bool then = debounce;
 		debounce = now;
 		return (now && !then);
 	}
 };
-Debounce sullyTouch[3];
+Debounce _sullyTouch[CUBE_ALLOCATION];
+bool touchEvents[CUBE_ALLOCATION];
 
 class SimpleHandler : public Scene::Handler
 {
@@ -143,7 +142,7 @@ public:
 	int32_t updateElement(Scene::Element &el, uint8_t fc=0)
 	{
 		// maybe someone touched a sully
-		return sullyTouch[el.cube].isTouching() ? (el.cube+1) : 0;
+		return touchEvents[el.cube] ? (el.cube+1) : 0;
 	}
 
 	void cubeCount(uint8_t cubes)
@@ -162,21 +161,15 @@ class SimpleMotionMapper : public Scene::MotionMapper
 public:
 	void attachMotion(uint8_t cube, CubeID param)
 	{
-		if(cube<3)
-		{
-			sullyTouch[cube].setCube(param);
-		}
+		_sullyTouch[cube].setCube(param);
 	}
-	void detachMotion(uint8_t cube, CubeID param)
+	void updateAllMotion(const BitArray<CUBE_ALLOCATION> &map)
 	{
-		if(cube<3)
+		// correctly suppress events from cubes no longer connected
+		for(uint8_t i=0; i<CUBE_ALLOCATION; i++)
 		{
-			sullyTouch[cube].setCube(CubeID::UNDEFINED);
+			touchEvents[i] = (map.test(i)) ? _sullyTouch[i].isTouching() : false;
 		}
-	}
-	void updateMotion(uint8_t cube)
-	{
-		// no need to do handling here
 	}
 };
 

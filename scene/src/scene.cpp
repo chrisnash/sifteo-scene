@@ -73,8 +73,7 @@ namespace Scene
 	class NoMotion : public MotionMapper
 	{
 		void attachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
-		void detachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
-		void updateMotion(uint8_t cube) {}
+		void updateAllMotion(const BitArray<CUBE_ALLOCATION> &map) {}
 	}
 	noMotion;
 	MotionMapper *motionMapper = &noMotion;
@@ -124,7 +123,6 @@ namespace Scene
 			connectionMap.clear(logical);
 
 			CubeID(physical).detachMotionBuffer();
-			motionMapper->detachMotion(logical, physical);
 
 			// bubble down allocated cubes to fill any spaces
 			// basically keep moving the highest assigned logical cube to the lowest unassigned logical cube
@@ -137,7 +135,6 @@ namespace Scene
 				connectionMap.clear(highest);
 
 				CubeID(physical).detachMotionBuffer();
-				motionMapper->detachMotion(highest, physical);
 
 				// bind physical to logical, bind highest to nowhere
 				toLogical[physical] = logical;
@@ -168,60 +165,6 @@ namespace Scene
 		{
 			return connectionMap;
 		}
-
-		void detachAllMotion()
-		{
-			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
-			{
-				uint8_t physical = toPhysical[logical];
-				if(physical != CubeID::UNDEFINED)
-				{
-					CubeID cube(physical);
-					cube.detachMotionBuffer();
-					motionMapper->detachMotion(logical, cube);
-				}
-			}
-		}
-
-		void detachAllVideo()
-		{
-			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
-			{
-				uint8_t physical = toPhysical[logical];
-				if(physical != CubeID::UNDEFINED)
-				{
-					CubeID cube(physical);
-					cube.detachVideoBuffer();
-				}
-			}
-		}
-
-		void attachAllMotion()
-		{
-			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
-			{
-				uint8_t physical = toPhysical[logical];
-				if(physical != CubeID::UNDEFINED)
-				{
-					CubeID cube(physical);
-					motionMapper->attachMotion(logical, cube);
-				}
-			}
-		}
-
-		void updateAllMotion()
-		{
-			for(uint8_t logical=0; logical<CUBE_ALLOCATION; logical++)
-			{
-				uint8_t physical = toPhysical[logical];
-				if(physical != CubeID::UNDEFINED)
-				{
-					CubeID cube(physical);
-					motionMapper->updateMotion(logical);
-				}
-			}
-		}
-
 
 		void refreshNeighbors()
 		{
@@ -276,7 +219,7 @@ namespace Scene
 
 		bool refreshState()
 		{
-			updateAllMotion();
+			motionMapper->updateAllMotion(getConnectionMap());
 			if(!attentionNeighbors.empty())
 			{
 				refreshNeighbors();
@@ -325,6 +268,22 @@ namespace Scene
 				END_TIMER;
 			}
 			return resetEvent;
+		}
+
+		void detachAllMotion()
+		{
+			for(uint8_t i=0; i<CUBE_ALLOCATION; i++)
+			{
+				CubeID(i).detachMotionBuffer();
+			}
+		}
+		void attachAllMotion()
+		{
+			for(uint8_t l : connectionMap)
+			{
+				uint8_t p = toPhysical[l];
+				motionMapper->attachMotion(l, CubeID(p));
+			}
 		}
 	}
 	cubeMapping;

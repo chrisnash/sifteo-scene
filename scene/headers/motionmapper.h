@@ -14,8 +14,7 @@ namespace Scene
 	{
 	public:
 		virtual void attachMotion(uint8_t cube, Sifteo::CubeID parameter) = 0;
-		virtual void detachMotion(uint8_t cube, Sifteo::CubeID parameter) = 0;
-		virtual void updateMotion(uint8_t cube) = 0;
+		virtual void updateAllMotion(const Sifteo::BitArray<CUBE_ALLOCATION> &cubeMap) = 0;
 	};
 }
 

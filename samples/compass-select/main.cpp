@@ -141,7 +141,6 @@ class SimpleMotionMapper : public Scene::MotionMapper
 public:
 	bool isTouching()
 	{
-		if(id == CubeID::UNDEFINED) return false;
 		bool now = id.isTouching();
 		bool then = debounce;
 		debounce = now;
@@ -153,20 +152,13 @@ public:
 		if(cube==0)
 		{
 			id = param;
-			debounce = (param !=CubeID::UNDEFINED) ? param.isTouching() : false;
+			debounce = param.isTouching();
 			tsr.attach(param);
 		}
 	}
-	void detachMotion(uint8_t cube, CubeID param)
+	void updateAllMotion(const BitArray<CUBE_ALLOCATION> &map)
 	{
-		if(cube==0)
-		{
-			id = CubeID::UNDEFINED;
-		}
-	}
-	void updateMotion(uint8_t cube)
-	{
-		if(cube==0)
+		if(map.test(0))
 		{
 			tsr.update();
 			Byte3 &tilt = tsr.tilt;
