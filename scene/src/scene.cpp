@@ -584,7 +584,7 @@ namespace Scene
 		}
 		while(!redraw.empty() || !cubesLoading.empty());
 
-		SCENELOG("Refresh motion and neighbors\n");
+		SCENELOG("SCENE: Refresh motion and neighbors\n");
 		START_TIMER;
 		if(cubeMapping.refreshState()) handler.neighborAlert();							// sample motion and neighbor events
 		END_TIMER;
