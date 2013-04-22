@@ -23,7 +23,7 @@ namespace Scene
 	// the items that need a redraw in order to do a full render
 	BitArray<SCENE_MAX_SIZE> initialDraw;
 
-	bool resetEvent;
+	bool resetEvent = false;
 
 	// current cube modes
 	uint8_t currentModes[CUBE_ALLOCATION];
@@ -371,21 +371,18 @@ namespace Scene
 
 	bool paint()
 	{
-		resetEvent = false;
 		System::paint();
 		return cubeMapping.pumpEvents();
 	}
 
 	bool paintUnlimited()
 	{
-		resetEvent = false;
 		System::paintUnlimited();
 		return cubeMapping.pumpEvents();
 	}
 
 	bool yield()
 	{
-		resetEvent = false;
 		System::yield();
 		timeStep.next();
 		return cubeMapping.pumpEvents();
@@ -404,6 +401,7 @@ namespace Scene
 		for(uint8_t i=0; i<CUBE_ALLOCATION; i++) currentModes[i] = NO_MODE;
 		attentionNeighbors.mark();
 		timeStep.next();
+		resetEvent = false;	// clear the pending reset flag
 	}
 
 	void initialize()
