@@ -375,19 +375,6 @@ namespace Scene
 		return cubeMapping.pumpEvents();
 	}
 
-	bool paintUnlimited()
-	{
-		System::paintUnlimited();
-		return cubeMapping.pumpEvents();
-	}
-
-	bool yield()
-	{
-		System::yield();
-		timeStep.next();
-		return cubeMapping.pumpEvents();
-	}
-
 	void reset()
 	{
 		// hard cancel any in-progress loaders
@@ -560,15 +547,7 @@ namespace Scene
 							loadingScreen->onAttach(cube, vid[cube], loadingScreenPart);
 							if(!loadingScreenReady)
 							{
-								if(Scene::paintUnlimited())
-								{
-									// hard abort this loop
-									Scene::reset();
-									attachPending.clear();
-									todo.clear();
-									handler.cubeCount( cubeMapping.getCubeCount() );
-									break;
-								}
+								System::paintUnlimited();
 								loadingScreenPart++;
 							}
 						}
