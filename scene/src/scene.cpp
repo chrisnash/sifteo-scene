@@ -339,7 +339,6 @@ namespace Scene
 		// perform a full reset of the scene
 		redraw = initialDraw;
 		for(uint8_t i=0; i<CUBE_ALLOCATION; i++) currentModes[i] = NO_MODE;
-		cubeMapping.attachAllMotion();
 		attentionNeighbors.mark();
 		timeStep.next();
 	}
@@ -558,6 +557,7 @@ namespace Scene
 			{
 				Scene::reset();
 				handler.cubeCount( cubeMapping.getCubeCount() );
+				cubeMapping.attachAllMotion();
 				resetEvent = false;	// mark reset event as correctly handled
 			}
 
