@@ -108,7 +108,6 @@ namespace Scene
 			toPhysical[logical] = physical;
 			toLogical[physical] = logical;
 			connectionMap.mark(logical);
-			motionMapper->attachMotion(logical, CubeID(physical));
 			return true;
 		}
 
@@ -140,8 +139,6 @@ namespace Scene
 				toLogical[physical] = logical;
 				toPhysical[logical] = physical;
 				connectionMap.mark(logical);
-
-				motionMapper->attachMotion(logical, CubeID(physical));
 			}
 
 			return true;
@@ -264,6 +261,7 @@ namespace Scene
 				for(uint8_t i=0; i<CUBE_ALLOCATION; i++)
 				{
 					CubeID(i).detachVideoBuffer();
+					CubeID(i).detachMotionBuffer();
 				}
 				END_TIMER;
 			}
@@ -345,6 +343,7 @@ namespace Scene
 		// perform a full reset of the scene
 		redraw = initialDraw;
 		for(uint8_t i=0; i<CUBE_ALLOCATION; i++) currentModes[i] = NO_MODE;
+		cubeMapping.attachAllMotion();
 		attentionNeighbors.mark();
 		timeStep.next();
 		resetEvent = false;	// clear the pending reset flag
