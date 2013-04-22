@@ -635,9 +635,14 @@ namespace Scene
 		attentionNeighbors.mark();
 		// and make an immediate cube count callback
 		handler.cubeCount( cubeMapping.getCubeCount() );
+		// attach all motion
+		cubeMapping.attachAllMotion();
 
 		int32_t exitCode;
 		while( (exitCode=doRedraw(handler)) == 0);
+
+		cubeMapping.detachAllMotion();
+
 		return exitCode;
 	}
 
