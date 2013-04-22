@@ -227,8 +227,17 @@ public:
 	void neighborAlert() {}
 };
 
+namespace Scene
+{
+	extern bool scenelog;
+	extern bool scenetime;
+}
+
 void main()
 {
+	Scene::scenelog = true;
+	Scene::scenetime = true;
+
 	// initialize scene
 	Scene::initialize();
 

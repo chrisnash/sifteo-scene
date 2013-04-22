@@ -121,8 +121,6 @@ namespace Scene
 			toPhysical[logical] = CubeID::UNDEFINED;
 			connectionMap.clear(logical);
 
-			CubeID(physical).detachMotionBuffer();
-
 			// bubble down allocated cubes to fill any spaces
 			// basically keep moving the highest assigned logical cube to the lowest unassigned logical cube
 			uint8_t highest = CUBE_ALLOCATION - 1;
@@ -132,8 +130,6 @@ namespace Scene
 				physical = toPhysical[highest];
 				toPhysical[highest] = CubeID::UNDEFINED;
 				connectionMap.clear(highest);
-
-				CubeID(physical).detachMotionBuffer();
 
 				// bind physical to logical, bind highest to nowhere
 				toLogical[physical] = logical;
