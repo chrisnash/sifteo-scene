@@ -86,6 +86,7 @@ namespace Scene
 	{
 		uint8_t toPhysical[CUBE_ALLOCATION];
 		uint8_t toLogical[CUBE_ALLOCATION];
+		BitArray<CUBE_ALLOCATION> connectionMap;
 	public:
 		void initialize()
 		{
@@ -94,6 +95,7 @@ namespace Scene
 				toPhysical[i] = CubeID::UNDEFINED;
 				toLogical[i] = CubeID::UNDEFINED;
 			}
+			connectionMap.clear();
 		}
 
 		// allocate a physical cube to a logical slot
@@ -106,6 +108,7 @@ namespace Scene
 			while(toPhysical[logical] != CubeID::UNDEFINED) logical++;
 			toPhysical[logical] = physical;
 			toLogical[physical] = logical;
+			connectionMap.mark(logical);
 			motionMapper->attachMotion(logical, CubeID(physical));
 			return true;
 		}
@@ -118,6 +121,8 @@ namespace Scene
 			if(logical == CubeID::UNDEFINED) return false;
 			toLogical[physical] = CubeID::UNDEFINED;
 			toPhysical[logical] = CubeID::UNDEFINED;
+			connectionMap.clear(logical);
+
 			CubeID(physical).detachMotionBuffer();
 			motionMapper->detachMotion(logical, physical);
 
@@ -129,12 +134,16 @@ namespace Scene
 			{
 				physical = toPhysical[highest];
 				toPhysical[highest] = CubeID::UNDEFINED;
+				connectionMap.clear(highest);
+
 				CubeID(physical).detachMotionBuffer();
 				motionMapper->detachMotion(highest, physical);
 
 				// bind physical to logical, bind highest to nowhere
 				toLogical[physical] = logical;
 				toPhysical[logical] = physical;
+				connectionMap.mark(logical);
+
 				motionMapper->attachMotion(logical, CubeID(physical));
 			}
 
@@ -152,9 +161,12 @@ namespace Scene
 
 		uint8_t getCubeCount()
 		{
-			uint8_t i=0;
-			while((i<CUBE_ALLOCATION)&&(toPhysical[i] != CubeID::UNDEFINED)) i++;
-			return i;
+			return connectionMap.count();
+		}
+
+		BitArray<CUBE_ALLOCATION> &getConnectionMap()
+		{
+			return connectionMap;
 		}
 
 		void detachAllMotion()
