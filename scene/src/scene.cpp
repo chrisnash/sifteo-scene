@@ -42,8 +42,8 @@ namespace Scene
 	BitArray<CUBE_ALLOCATION> cubesLoading(0,0);	// nothing set
 
 	// The frame threshold. Log a warning if the update counter is too large.
-	// The default value effectively disables this test.
-	uint8_t frameThreshold = 0xFF;
+	// The default value assumes updates are within 10Hz
+	uint8_t frameThreshold = 0x06;
 
 	class DefaultLoadingScreen : public LoadingScreen
 	{
@@ -305,10 +305,12 @@ namespace Scene
 			{
 				SCENELOG("SCENE: detaching all video\n");
 				// detach all the video buffers. Yes, I'm serious
+				START_TIMER;
 				for(uint8_t i=0; i<CUBE_ALLOCATION; i++)
 				{
 					CubeID(i).detachVideoBuffer();
 				}
+				END_TIMER;
 			}
 			return resetEvent;
 		}
@@ -389,6 +391,7 @@ namespace Scene
 		redraw = initialDraw;
 		for(uint8_t i=0; i<CUBE_ALLOCATION; i++) currentModes[i] = NO_MODE;
 		attentionNeighbors.mark();
+		timeStep.next();
 	}
 
 	void initialize()
@@ -565,8 +568,13 @@ namespace Scene
 					{
 						// ok to perform the mode switch, and may as well attach right now
 						SCENELOG("SCENE: Mode switch of cube %d\n", cube);
+						SCENELOG("Detach old\n");
+						START_TIMER;
 						CubeID(physical).detachVideoBuffer();
+						END_TIMER;
 						// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
+						SCENELOG("Attach new\n");
+						START_TIMER;
 						bool attachNow = handler.switchMode(cube, elementMode, vid[cube]);
 						currentMode = currentModes[cube] = elementMode;
 						if(attachNow)
@@ -577,8 +585,11 @@ namespace Scene
 						{
 							attachPending.mark(cube);
 						}
+						END_TIMER;
 						// on a mode switch, any active objects in this mode on this cube need to be redrawn ASAP
 						// for the moment, loop through all items to find matches.
+						SCENELOG("Refresh redraw list\n");
+						START_TIMER;
 						for(unsigned j : initialDraw)
 						{
 							Element *resync = sceneBuffer + j;
@@ -588,6 +599,7 @@ namespace Scene
 								todo.mark(j);
 							}
 						}
+						END_TIMER;
 					}
 				}
 			}
@@ -618,18 +630,21 @@ namespace Scene
 					{
 						SCENELOG("SCENE: Completed download to cube %d\n", i);
 						cubesLoading.clear(i);
-						timeStep.next();			// reset the frame clock
 					}
 				}
 				if(cubesLoading.empty())
 				{
 					assetLoader.finish();
+					timeStep.next();			// reset the frame clock
 				}
 			}
 		}
 		while(!redraw.empty() || !cubesLoading.empty());
 
+		SCENELOG("Refresh motion and neighbors\n");
+		START_TIMER;
 		if(cubeMapping.refreshState()) handler.neighborAlert();							// sample motion and neighbor events
+		END_TIMER;
 
 		timeStep.next();									// get a time sample
 		uint8_t fc = frameRate.tick(timeStep.delta());		// figure out how much to advance the clock
@@ -694,6 +709,10 @@ namespace Scene
 		return rv;
 	}
 
+	void setFrameThreshold(uint8_t ft)
+	{
+		frameThreshold = ft;
+	}
 
 	Element &getElement(uint16_t index)
 	{
