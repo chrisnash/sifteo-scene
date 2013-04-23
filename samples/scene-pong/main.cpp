@@ -225,6 +225,10 @@ public:
 	void cubeCount(uint8_t cubes) {}
 
 	void neighborAlert() {}
+
+	void attachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
+
+	void updateAllMotion(const Sifteo::BitArray<CUBE_ALLOCATION> &cubeMap) {}
 };
 
 namespace Scene

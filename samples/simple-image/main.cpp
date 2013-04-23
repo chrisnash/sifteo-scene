@@ -154,15 +154,12 @@ public:
 	{
 		LOG("Neighbor state has changed\n");
 	}
-};
 
-class SimpleMotionMapper : public Scene::MotionMapper
-{
-public:
 	void attachMotion(uint8_t cube, CubeID param)
 	{
 		_sullyTouch[cube].setCube(param);
 	}
+
 	void updateAllMotion(const BitArray<CUBE_ALLOCATION> &map)
 	{
 		// correctly suppress events from cubes no longer connected
@@ -177,8 +174,6 @@ void main()
 {
 	// initialize scene
 	Scene::initialize();
-	SimpleMotionMapper smm;
-	Scene::setMotionMapper(smm);
 	FancyLoadingScreen fls;
 	Scene::setLoadingScreen(fls);
 

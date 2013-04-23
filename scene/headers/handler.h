@@ -14,6 +14,7 @@ namespace Scene
 	{
 		friend int32_t execute(Handler &h);
 		friend int32_t doRedraw(Handler &h);
+		friend class CubeMapping;
 	protected:
 		// mode functions
 		virtual Sifteo::AssetConfiguration<ASSET_CAPACITY> *requestAssets(uint8_t cube, uint8_t mode) = 0;
@@ -24,7 +25,9 @@ namespace Scene
 		// callbacks
 		virtual void cubeCount(uint8_t cubes) = 0;
 		virtual void neighborAlert() = 0;
-
+		// motion mapping
+		virtual void attachMotion(uint8_t cube, Sifteo::CubeID parameter) = 0;
+		virtual void updateAllMotion(const Sifteo::BitArray<CUBE_ALLOCATION> &cubeMap) = 0;
 	};
 }
 #endif /* HANDLER_H_ */

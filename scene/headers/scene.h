@@ -13,7 +13,6 @@
 #include "defines.h"
 #include "handler.h"
 #include "loadingscreen.h"
-#include "motionmapper.h"
 
 namespace Scene
 {
@@ -27,8 +26,6 @@ namespace Scene
 	void initialize();
 
 	void setLoadingScreen(LoadingScreen &p);
-	void setMotionMapper(MotionMapper &p);
-	void clearMotionMapper();
 
 	void setFrameRate(float frameRate);
 

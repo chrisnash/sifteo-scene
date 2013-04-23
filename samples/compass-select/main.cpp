@@ -51,9 +51,14 @@ public:
 	}
 };
 
+// not on the stack!
+TiltShakeRecognizer tsr;
+
 class SimpleHandler : public Scene::Handler
 {
 	Sifteo::AssetConfiguration<ASSET_CAPACITY> assetconf;
+	CubeID id;
+	bool debounce;
 public:
 	SimpleHandler()
 	{
@@ -131,14 +136,7 @@ public:
 
 	void cubeCount(uint8_t cubes) {}
 	void neighborAlert() {}
-};
 
-class SimpleMotionMapper : public Scene::MotionMapper
-{
-	CubeID id;
-	bool debounce;
-	TiltShakeRecognizer tsr;
-public:
 	bool isTouching()
 	{
 		bool now = id.isTouching();
@@ -166,14 +164,12 @@ public:
 			touching = isTouching();
 		}
 	}
-}
-smm;
+};
 
 void main()
 {
 	// initialize scene
 	Scene::initialize();
-	Scene::setMotionMapper(smm);	// not on the stack
 
 	SimpleHandler sh;
 

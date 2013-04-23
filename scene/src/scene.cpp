@@ -70,14 +70,6 @@ namespace Scene
 
 	Neighborhood neighborhoods[CUBE_ALLOCATION];
 
-	class NoMotion : public MotionMapper
-	{
-		void attachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
-		void updateAllMotion(const BitArray<CUBE_ALLOCATION> &map) {}
-	}
-	noMotion;
-	MotionMapper *motionMapper = &noMotion;
-
 	TimeTicker frameRate(60.0);
 	TimeStep timeStep;
 
@@ -212,7 +204,6 @@ namespace Scene
 
 		bool refreshState()
 		{
-			motionMapper->updateAllMotion(getConnectionMap());
 			if(!attentionNeighbors.empty())
 			{
 				refreshNeighbors();
@@ -271,12 +262,12 @@ namespace Scene
 				CubeID(i).detachMotionBuffer();
 			}
 		}
-		void attachAllMotion()
+		void attachAllMotion(Handler &h)
 		{
 			for(uint8_t l : connectionMap)
 			{
 				uint8_t p = toPhysical[l];
-				motionMapper->attachMotion(l, CubeID(p));
+				h.attachMotion(l, CubeID(p));
 			}
 		}
 	}
@@ -351,17 +342,6 @@ namespace Scene
 	void setLoadingScreen(LoadingScreen &p)
 	{
 		loadingScreen = &p;
-	}
-
-	void setMotionMapper(MotionMapper &p)
-	{
-		cubeMapping.detachAllMotion();
-		motionMapper = &p;
-		cubeMapping.attachAllMotion();
-	}
-	void clearMotionMapper()
-	{
-		setMotionMapper(noMotion);
 	}
 
 	void setFrameRate(float fr)
@@ -557,7 +537,7 @@ namespace Scene
 			{
 				Scene::reset();
 				handler.cubeCount( cubeMapping.getCubeCount() );
-				cubeMapping.attachAllMotion();
+				cubeMapping.attachAllMotion(handler);
 				resetEvent = false;	// mark reset event as correctly handled
 			}
 
@@ -584,7 +564,8 @@ namespace Scene
 		}
 		while(!redraw.empty() || !cubesLoading.empty());
 
-		SCENELOG("SCENE: Refresh motion and neighbors\n");
+		handler.updateAllMotion(cubeMapping.getConnectionMap());
+		SCENELOG("SCENE: Refresh neighbors\n");
 		START_TIMER;
 		if(cubeMapping.refreshState()) handler.neighborAlert();							// sample motion and neighbor events
 		END_TIMER;
@@ -636,7 +617,7 @@ namespace Scene
 		// and make an immediate cube count callback
 		handler.cubeCount( cubeMapping.getCubeCount() );
 		// attach all motion
-		cubeMapping.attachAllMotion();
+		cubeMapping.attachAllMotion(handler);
 
 		int32_t exitCode;
 		while( (exitCode=doRedraw(handler)) == 0);

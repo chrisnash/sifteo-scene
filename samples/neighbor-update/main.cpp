@@ -93,6 +93,9 @@ public:
 			Scene::getElement(neighborBase + i).setUpdate();
 		}
 	}
+
+	void attachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
+	void updateAllMotion(const Sifteo::BitArray<CUBE_ALLOCATION> &cubeMap) {}
 };
 
 void main()
