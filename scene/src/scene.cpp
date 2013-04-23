@@ -40,6 +40,7 @@ namespace Scene
 	// Asset loader
 	AssetLoader assetLoader;
 	BitArray<CUBE_ALLOCATION> cubesLoading(0,0);	// nothing set
+	uint8_t syncMode = Scene::SYNC_DOWNLOAD;
 
 	// The frame threshold. Log a warning if the update counter is too large.
 	// The default value assumes updates are within 10Hz
@@ -400,6 +401,9 @@ namespace Scene
 		// for at least one paint cycle
 		do
 		{
+			// if we are in full sync mode and a download is taking place, drawing is banned.
+			bool drawBan = (syncMode == Scene::SYNC_FULL) && (!cubesLoading.empty());
+
 			BitArray<CUBE_ALLOCATION> dirty(0,0);			// mark cubes that are drawn on, you can't mode switch until they paint
 			BitArray<CUBE_ALLOCATION> attachPending(0,0);	// mark cubes that were drawn on in detached mode
 			BitArray<SCENE_MAX_SIZE> todo = redraw;
@@ -428,11 +432,18 @@ namespace Scene
 				// if the mode is OK, just draw it
 				if(currentMode == elementMode)
 				{
-					SCENELOG("SCENE: Draw element %d\n", i);
-					START_TIMER;
-					handler.drawElement(element, vid[cube]);
-					END_TIMER;
-					dirty.mark(cube);
+					if(drawBan)
+					{
+						redraw.mark(i);	// try again later
+					}
+					else
+					{
+						SCENELOG("SCENE: Draw element %d\n", i);
+						START_TIMER;
+						handler.drawElement(element, vid[cube]);
+						END_TIMER;
+						dirty.mark(cube);
+					}
 				}
 				// if the cube is dirty, just requeue this one for after the next paint event
 				else if(dirty.test(cube))
@@ -486,7 +497,7 @@ namespace Scene
 						}
 						redraw.mark(i);	// queue this item after at least one loader paint cycle
 					}
-					else
+					else if(!drawBan)
 					{
 						// ok to perform the mode switch, and may as well attach right now
 						SCENELOG("SCENE: Mode switch of cube %d\n", cube);
@@ -523,6 +534,11 @@ namespace Scene
 						}
 						END_TIMER;
 					}
+					else
+					{
+						// mode switch was requested but drawing was banned
+						redraw.mark(i);
+					}
 				}
 			}
 
@@ -545,15 +561,33 @@ namespace Scene
 			// check for loading cubes that have finished
 			if(!cubesLoading.empty())
 			{
-				for(uint8_t i : cubesLoading)
+				// if no sync, do every cube individually
+				if(syncMode == Scene::SYNC_NONE)
 				{
-					float progress = assetLoader.cubeProgress(i);
-					uint8_t logical = cubeMapping.logical(i);
-					loadingScreen->update(logical, progress, vid[logical]);
-					if(assetLoader.isComplete(i))
+					for(uint8_t i : cubesLoading)
 					{
-						SCENELOG("SCENE: Completed download to cube %d\n", i);
-						cubesLoading.clear(i);
+						float progress = assetLoader.cubeProgress(i);
+						uint8_t logical = cubeMapping.logical(i);
+						loadingScreen->update(logical, progress, vid[logical]);
+						if(assetLoader.isComplete(i))
+						{
+							SCENELOG("SCENE: Completed download to cube %d\n", i);
+							cubesLoading.clear(i);
+						}
+					}
+				}
+				else
+				{
+					float progress = assetLoader.averageProgress();	// same progress on all cubes
+					for(uint8_t i : cubesLoading)
+					{
+						uint8_t logical = cubeMapping.logical(i);
+						loadingScreen->update(logical, progress, vid[logical]);
+					}
+					if(assetLoader.isComplete())
+					{
+						SCENELOG("SCENE: Completed download to all cubes\n");
+						cubesLoading.clear();
 					}
 				}
 				if(cubesLoading.empty())
@@ -642,6 +676,11 @@ namespace Scene
 	void setFrameThreshold(uint8_t ft)
 	{
 		frameThreshold = ft;
+	}
+
+	void setSyncMode(uint8_t sm)
+	{
+		syncMode = sm;
 	}
 
 	Element &getElement(uint16_t index)

@@ -23,11 +23,16 @@ namespace Scene
 	const uint8_t NO_UPDATE		= 0x00;
 	const uint8_t FULL_UPDATE	= 0xFF;
 
+	const uint8_t SYNC_NONE		= 0x00;
+	const uint8_t SYNC_DOWNLOAD	= 0x01;
+	const uint8_t SYNC_FULL		= 0x02;
+
 	void initialize();
 
 	void setLoadingScreen(LoadingScreen &p);
 
 	void setFrameRate(float frameRate);
+	void setSyncMode(uint8_t sm);
 
 	// API to build a scene directly into the buffer
 	void beginScene();
