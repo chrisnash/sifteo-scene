@@ -157,26 +157,45 @@ public:
 					// left
 					if( (ball.x < batWidth + ballRadius) && (xv<0.0))
 					{
-						// hit bat
-						a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
-						// angle must be between -9 and 9
-						if(a>=36)
+						// hit bat 0?
+						Bat &bat = *((Bat*)Scene::getElement(bat0element).object);
+						if( (ball.y < bat.y - batLength/2 - ballRadius) || (ball.y > bat.y + batLength/2 + ballRadius) )
 						{
-							if(a<63) a=63;
+							ball.server = 0;
+							el.setUpdate(120);	// reserve the ball in 2 seconds
 						}
 						else
 						{
-							if(a>9) a=9;
+							a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
+							// angle must be between -9 and 9
+							if(a>=36)
+							{
+								if(a<63) a=63;
+							}
+							else
+							{
+								if(a>9) a=9;
+							}
+							xvyv(a, xv, yv);
 						}
-						xvyv(a, xv, yv);
 					}
 					else if( (ball.x > 256.0 - batWidth - ballRadius) && (xv>0.0) )
 					{
-						a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
-						// between 27 and 45
-						if(a<27) a = 27;
-						if(a>45) a = 45;
-						xvyv(a, xv, yv);
+						// hit bat 1?
+						Bat &bat = *((Bat*)Scene::getElement(bat1element).object);
+						if( (ball.y < bat.y - batLength/2 - ballRadius) || (ball.y > bat.y + batLength/2 + ballRadius) )
+						{
+							ball.server = 1;
+							el.setUpdate(120);	// reserve the ball in 2 seconds
+						}
+						else
+						{
+							a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
+							// between 27 and 45
+							if(a<27) a = 27;
+							if(a>45) a = 45;
+							xvyv(a, xv, yv);
+						}
 					}
 
 					if( (ball.y<wallWidth+ballRadius) && (yv<0.0) )
@@ -189,9 +208,12 @@ public:
 						a = Sifteo::umod(-a,72);
 						xvyv(a, xv, yv);
 					}
-					ball.angle = a;
-					ball.x += xv;
-					ball.y += yv;
+					if(ball.server == 2)	// still in play
+					{
+						ball.angle = a;
+						ball.x += xv;
+						ball.y += yv;
+					}
 				}
 				el.repaint();
 				Scene::getElement(ballSlave).repaint();
@@ -256,8 +278,8 @@ void main()
 
 	// ball
 	BallObj ballobj;
-	ballobj.server = 0;	// player 1 will serve in 25 frames
-	ballElement = Scene::addElement(1,	0,0, 25, Scene::NO_UPDATE, &ballobj);
+	ballobj.server = 0;	// player 1 will serve in 120 frames
+	ballElement = Scene::addElement(1,	0,0, 120, Scene::NO_UPDATE, &ballobj);
 	ballSlave = Scene::addElement(1,	1,0);
 
 	// bat
