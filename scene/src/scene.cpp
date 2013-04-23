@@ -394,6 +394,11 @@ namespace Scene
 		reset();
 	}
 
+	Element &createElement(uint8_t type, uint8_t cube, uint8_t mode, void *object)
+	{
+		return getElement(addElement(type, cube, mode, Scene::NO_UPDATE, Scene::NO_UPDATE, object));
+	}
+
 	uint16_t addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update, uint8_t autoupdate, void *object)
 	{
 		ASSERT(sceneSize < SCENE_MAX_SIZE);
@@ -768,36 +773,51 @@ namespace Scene
 		return sceneBuffer[index];
 	}
 
-	void Element::repaint()
+	Element &Element::repaint()
 	{
 		uint16_t index = this - sceneBuffer;
 		ASSERT(index < sceneSize);
 		redraw.mark(index);
+		return *this;
 	}
 
-	void Element::setUpdate(uint8_t u)
+	Element &Element::setUpdate(uint8_t u)
 	{
 		update = u;
+		return *this;
 	}
 
-	void Element::clearUpdate()
+	Element &Element::clearUpdate()
 	{
-		setUpdate(0);
+		return setUpdate(Scene::NO_UPDATE);
 	}
 
-	void Element::show()
+	Element &Element::fullUpdate()
+	{
+		return setUpdate(Scene::FULL_UPDATE);
+	}
+
+	Element &Element::setAutoupdate(uint8_t au)
+	{
+		autoupdate = au;
+		return *this;
+	}
+
+	Element &Element::show()
 	{
 		uint16_t index = this - sceneBuffer;
 		ASSERT(index < sceneSize);
 		initialDraw.mark(index);
 		redraw.mark(index);
+		return *this;
 	}
 
-	void Element::hide()
+	Element &Element::hide()
 	{
 		uint16_t index = this - sceneBuffer;
 		ASSERT(index < sceneSize);
 		initialDraw.clear(index);
 		redraw.clear(index);
+		return *this;
 	}
 }

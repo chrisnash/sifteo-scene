@@ -24,11 +24,14 @@ namespace Scene
 			void *object;		// pointer to user defined object
 			uint8_t data[4];	// user defined data
 		};
-		void repaint();			// repaint this element
-		void clearUpdate();
-		void setUpdate(uint8_t update=1);
-		void show();
-		void hide();
+
+		Element &repaint();			// repaint this element
+		Element &clearUpdate();
+		Element &setUpdate(uint8_t update=1);
+		Element &fullUpdate();
+		Element &setAutoupdate(uint8_t autoupdate);
+		Element &show();
+		Element &hide();
 	};
 }
 #endif /* ELEMENT_H_ */
