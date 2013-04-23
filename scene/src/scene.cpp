@@ -479,13 +479,13 @@ namespace Scene
 						assetLoader.start(*pAssets, CubeSet(physical));
 						cubesLoading.mark(physical);
 						currentMode = currentModes[cube] = NO_MODE;
-						CubeID(physical).detachVideoBuffer();
 
 						// allow for a multimodal loading screen
 						bool loadingScreenReady = false;
 						uint8_t loadingScreenPart = 0;
 						while(!loadingScreenReady)
 						{
+							CubeID(physical).detachVideoBuffer();
 							loadingScreenReady = loadingScreen->init(cube, vid[cube], loadingScreenPart);
 							vid[cube].attach(physical);
 							loadingScreen->onAttach(cube, vid[cube], loadingScreenPart);
