@@ -10,35 +10,50 @@ static Metadata M = Metadata()
     .title("scene-pong")
     .package("com.github.sifteo-scene.scene-pong", "0.1")
 //    .icon(Icon)
-    .cubeRange(1, CUBE_ALLOCATION);
+    .cubeRange(2, CUBE_ALLOCATION);
 
 AssetSlot bootstrap = AssetSlot::allocate();
 AssetSlot slot_1 = AssetSlot::allocate();
 AssetSlot slot_2 = AssetSlot::allocate();
 AssetSlot slot_3 = AssetSlot::allocate();
 
-float ballRadius = 2.0;
-float batWidth = 4.0;
-float batLength = 16.0;
-float ballVelocity = 2.0;
-float wallWidth = 4.0;
-float batVelocity = 1.0;
-float batCloseness = 4.0;
-float vision = 100.0;	// is this smart enough
+// type definitions
+const int TYPE_BOARD = 0;
+const int TYPE_BALL = 1;
+const int TYPE_BAT = 2;
+const int TYPE_SCORE = 3;
+const int TYPE_SPLASH = 4;
 
-uint16_t ballElement;
-uint16_t ballSlave;
-uint16_t bat0element;
-uint16_t bat1element;
-uint16_t score0element;
-uint16_t score1element;
-uint16_t go0element;
-uint16_t go1element;
+const int MODE_MAIN	= 0;
+const int MODE_SPLASH = 1;
 
-uint8_t maxScore = 9;
+// physics parameters
+const float ballRadius = 2.0;
+const float batWidth = 4.0;
+const float batLength = 16.0;
+const float ballVelocity = 2.0;
+const float wallWidth = 4.0;
+const float batVelocity = 1.0;
+const float batCloseness = 4.0;
+const float vision = 100.0;
 
+const uint8_t SERVE_TIME = 120;
+const uint8_t SPLASH_TIME = 240;
+const uint8_t MAX_SCORE = 9;
+
+const int SCORE_1_X = 12;
+const int SCORE_2_X = 1;
+
+// element group pointers (2 elements per group)
+Scene::Element *pBall;
+Scene::Element *pBats;
+Scene::Element *pScores;
+Scene::Element *pSplashes;
+
+// RNG for the entire game
 Sifteo::Random rng;
 
+// Object classes
 class BallObj
 {
 public:
@@ -48,11 +63,20 @@ public:
 	uint8_t server;
 };
 
-class Bat
+class BatObj
 {
 public:
 	float y;
 };
+
+class GameLogic
+{
+
+};
+
+// Object instantiation
+BallObj _ball;
+BatObj _bats[2];
 
 class SimpleHandler : public Scene::Handler
 {
@@ -96,7 +120,7 @@ public:
 			break;
 		case 1: // ball
 			{
-				BallObj &ball = *((BallObj*)(Scene::getElement(ballElement).object));
+				BallObj &ball = el.obj<BallObj>();
 				float xmin = ((el.cube==0) ? 0.0f : 128.0) - ballRadius;
 				float xmax = ((el.cube==0) ? 128.0f : 256.0) + ballRadius;
 				if((ball.x >- xmin) && (ball.x <= xmax) && (ball.server==2) )
@@ -114,8 +138,8 @@ public:
 			break;
 		case 2: // bat
 			{
-				Bat *bat = (Bat*)el.object;
-				int y = round(bat->y - batLength/2);
+				BatObj &bat = el.obj<BatObj>();
+				int y = round(bat.y - batLength/2);
 				int x = (el.cube==0)?0:120;
 				v.sprites[1].setImage(Bats, el.cube);
 				v.sprites[1].move(vec(x,y));
@@ -147,7 +171,7 @@ public:
 				if(ball.server !=2)
 				{
 					// ready to serve the ball
-					Bat &bat= *((Bat *)(Scene::getElement((ball.server==0)?bat0element:bat1element).object));
+					BatObj &bat= pBats[ball.server].obj<BatObj>();
 					ball.x = (ball.server==0) ? (ballRadius + batWidth) : (256.0 - ballRadius - batWidth);
 					ball.y = bat.y;
 					// -9 +9
@@ -165,24 +189,21 @@ public:
 					if( (ball.x < batWidth + ballRadius) && (xv<0.0))
 					{
 						// hit bat 0?
-						Bat &bat = *((Bat*)Scene::getElement(bat0element).object);
+						BatObj &bat = pBats[0].obj<BatObj>();
 						if( (ball.y < bat.y - batLength/2 - ballRadius) || (ball.y > bat.y + batLength/2 + ballRadius) )
 						{
 							ball.server = 0;
-							el.setUpdate(120);	// reserve the ball in 2 seconds
-							Scene::Element &sc = Scene::getElement(score1element);
-							sc.data[0]++;
-							sc.repaint();
-							if(sc.data[0] == maxScore)
+							el.setUpdate(SERVE_TIME);	// reserve the ball in 2 seconds
+							Scene::Element &sc = pScores[1];
+							sc.repaint().data[0]++;
+							if( ++(sc.repaint()).data[0] == MAX_SCORE)
 							{
 								// stop game elements updating
-								Scene::getElement(ballElement).clearUpdate();
-								Scene::getElement(bat0element).clearUpdate();
-								Scene::getElement(bat1element).clearUpdate();
-								Scene::Element &go = Scene::getElement(go0element);
-								go.setUpdate(240);	// make the game over message disappear after 4 seconds
-								go.show();
-								Scene::getElement(go1element).show();
+								pBall[0].clearUpdate();
+								pBats[0].clearUpdate();
+								pBats[1].clearUpdate();
+								pSplashes[0].setUpdate(SPLASH_TIME).show();
+								pSplashes[1].show();
 							}
 						}
 						else
@@ -203,24 +224,20 @@ public:
 					else if( (ball.x > 256.0 - batWidth - ballRadius) && (xv>0.0) )
 					{
 						// hit bat 1?
-						Bat &bat = *((Bat*)Scene::getElement(bat1element).object);
+						BatObj &bat = pBats[1].obj<BatObj>();
 						if( (ball.y < bat.y - batLength/2 - ballRadius) || (ball.y > bat.y + batLength/2 + ballRadius) )
 						{
 							ball.server = 1;
-							el.setUpdate(120);	// reserve the ball in 2 seconds
-							Scene::Element &sc = Scene::getElement(score0element);
-							sc.data[0]++;
-							sc.repaint();
-							if(sc.data[0] == maxScore)
+							el.setUpdate(SERVE_TIME);	// reserve the ball in 2 seconds
+							Scene::Element &sc = pScores[0];
+							if( ++(sc.repaint()).data[0] == MAX_SCORE)
 							{
 								// stop game elements updating
-								Scene::getElement(ballElement).clearUpdate();
-								Scene::getElement(bat0element).clearUpdate();
-								Scene::getElement(bat1element).clearUpdate();
-								Scene::Element &go = Scene::getElement(go0element);
-								go.setUpdate(240);	// make the game over message disappear after 4 seconds
-								go.show();
-								Scene::getElement(go1element).show();
+								pBall[0].clearUpdate();
+								pBats[0].clearUpdate();
+								pBats[1].clearUpdate();
+								pSplashes[0].setUpdate(SPLASH_TIME).show();
+								pSplashes[1].show();
 							}
 
 						}
@@ -252,15 +269,15 @@ public:
 					}
 				}
 				el.repaint();
-				Scene::getElement(ballSlave).repaint();
+				pBall[1].repaint();	// and the shadow
 			}
 			break;
 		case 2: // bat
 			{
-				BallObj &ball = *((BallObj*)(Scene::getElement(ballElement).object));
+				BallObj &ball = pBall[0].obj<BallObj>();
 				if(ball.server == 2)	// only if the ball is in play
 				{
-					Bat &bat = *((Bat*)el.object);
+					BatObj &bat = el.obj<BatObj>();
 					float batx = (el.cube == 0) ? 0.0f : 256.0f;
 					if(abs(ball.x - batx) < vision)
 					{
@@ -277,23 +294,19 @@ public:
 		case 4:	// game over
 			{
 				// reset the scores and all the elements to update again
-				Scene::Element &be = Scene::getElement(ballElement);
-				BallObj &ball = *((BallObj*)be.object);
+				Scene::Element &be = pBall[0];
+				BallObj &ball = be.obj<BallObj>();
 				ball.server = 0;
-				be.setUpdate(120);
+				be.setUpdate(SERVE_TIME);
 
 				// set the scores to zero and repaint, that will make the entire layer 0 repaint anyway
-				Scene::Element &s0 = Scene::getElement(score0element);
-				s0.data[0] = 0;
-				s0.repaint();
-				Scene::Element &s1 = Scene::getElement(score1element);
-				s1.data[0] = 0;
-				s1.repaint();
+				pScores[0].repaint().data[0] = 0;
+				pScores[1].repaint().data[0] = 0;
 
-				Scene::getElement(bat0element).setUpdate(Scene::FULL_UPDATE);
-				Scene::getElement(bat1element).setUpdate(Scene::FULL_UPDATE);
-				Scene::getElement(go0element).hide();
-				Scene::getElement(go1element).hide();
+				pBats[0].fullUpdate();
+				pBats[1].fullUpdate();
+				pSplashes[0].hide();
+				pSplashes[1].hide();
 			}
 			break;
 		}
@@ -320,28 +333,24 @@ void main()
 	Scene::beginScene();
 
 	// board
-	Scene::addElement(0, 	0,0);
-	Scene::addElement(0, 	1,0);
+	Scene::createElement(TYPE_BOARD).duplicate(2);
 
 	// ball
-	BallObj ballobj;
-	ballobj.server = 0;	// player 1 will serve in 120 frames
-	ballElement = Scene::addElement(1,	0,0, 120, Scene::NO_UPDATE, &ballobj);
-	ballSlave = Scene::addElement(1,	1,0);
+	_ball.server = 0;
+	pBall = Scene::createElement(TYPE_BALL).setUpdate(SERVE_TIME).setObject(&_ball).shadow(2);
 
-	// bat
-	Bat bat1; bat1.y = 64.0;
-	Bat bat2; bat2.y = 64.0;
-	bat0element = Scene::addElement(2,	0,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &bat1);
-	bat1element = Scene::addElement(2,	1,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &bat2);
+	// bats
+	_bats[0].y = 64.0;
+	_bats[1].y = 64.0;
 
-	// score
-	score0element = Scene::addElement(3,	0,0);
-	score1element = Scene::addElement(3,	1,0);
+	void *batPointers[] = {_bats+0, _bats+1};
+	pBats = Scene::createElement(TYPE_BAT).fullUpdate().fromTemplate(2, batPointers);
+
+	// scores
+	pScores = Scene::createElement(TYPE_SCORE).duplicate(2);
 
 	// game over
-	go0element = Scene::addElement(4,	0|Scene::HIDE,1);
-	go1element = Scene::addElement(4,	1|Scene::HIDE,1);
+	pSplashes = Scene::createElement(TYPE_SPLASH).setMode(1).hide().duplicate(2);
 
 	while(1)
 	{
