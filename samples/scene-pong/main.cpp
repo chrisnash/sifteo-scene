@@ -32,6 +32,10 @@ uint16_t bat0element;
 uint16_t bat1element;
 uint16_t score0element;
 uint16_t score1element;
+uint16_t go0element;
+uint16_t go1element;
+
+uint8_t maxScore = 9;
 
 Sifteo::Random rng;
 
@@ -121,6 +125,7 @@ public:
 			v.bg1.image(vec((el.cube==0)?12:1,1), Digits, el.data[0]);
 			break;
 		case 4: // game over message
+			Font::drawCentered(v, vec(0,0), vec(128,32), "GAME OVER");
 			break;
 		}
 	}
@@ -166,10 +171,18 @@ public:
 							ball.server = 0;
 							el.setUpdate(120);	// reserve the ball in 2 seconds
 							Scene::Element &sc = Scene::getElement(score1element);
-							if(sc.data[0] < 9)
+							sc.data[0]++;
+							sc.repaint();
+							if(sc.data[0] == maxScore)
 							{
-								sc.data[0]++;
-								sc.repaint();
+								// stop game elements updating
+								Scene::getElement(ballElement).clearUpdate();
+								Scene::getElement(bat0element).clearUpdate();
+								Scene::getElement(bat1element).clearUpdate();
+								Scene::Element &go = Scene::getElement(go0element);
+								go.setUpdate(240);	// make the game over message disappear after 4 seconds
+								go.show();
+								Scene::getElement(go1element).show();
 							}
 						}
 						else
@@ -196,11 +209,20 @@ public:
 							ball.server = 1;
 							el.setUpdate(120);	// reserve the ball in 2 seconds
 							Scene::Element &sc = Scene::getElement(score0element);
-							if(sc.data[0] < 9)
+							sc.data[0]++;
+							sc.repaint();
+							if(sc.data[0] == maxScore)
 							{
-								sc.data[0]++;
-								sc.repaint();
+								// stop game elements updating
+								Scene::getElement(ballElement).clearUpdate();
+								Scene::getElement(bat0element).clearUpdate();
+								Scene::getElement(bat1element).clearUpdate();
+								Scene::Element &go = Scene::getElement(go0element);
+								go.setUpdate(240);	// make the game over message disappear after 4 seconds
+								go.show();
+								Scene::getElement(go1element).show();
 							}
+
 						}
 						else
 						{
@@ -253,6 +275,26 @@ public:
 			}
 			break;
 		case 4:	// game over
+			{
+				// reset the scores and all the elements to update again
+				Scene::Element &be = Scene::getElement(ballElement);
+				BallObj &ball = *((BallObj*)be.object);
+				ball.server = 0;
+				be.setUpdate(120);
+
+				// set the scores to zero and repaint, that will make the entire layer 0 repaint anyway
+				Scene::Element &s0 = Scene::getElement(score0element);
+				s0.data[0] = 0;
+				s0.repaint();
+				Scene::Element &s1 = Scene::getElement(score1element);
+				s1.data[0] = 0;
+				s1.repaint();
+
+				Scene::getElement(bat0element).setUpdate(Scene::FULL_UPDATE);
+				Scene::getElement(bat1element).setUpdate(Scene::FULL_UPDATE);
+				Scene::getElement(go0element).hide();
+				Scene::getElement(go1element).hide();
+			}
 			break;
 		}
 		return 0;	// just say it's never returning
@@ -267,17 +309,8 @@ public:
 	void updateAllMotion(const Sifteo::BitArray<CUBE_ALLOCATION> &cubeMap) {}
 };
 
-namespace Scene
-{
-	extern bool scenelog;
-	extern bool scenetime;
-}
-
 void main()
 {
-	Scene::scenelog = true;
-	Scene::scenetime = true;
-
 	// initialize scene
 	Scene::initialize();
 
@@ -307,8 +340,8 @@ void main()
 	score1element = Scene::addElement(3,	1,0);
 
 	// game over
-	Scene::addElement(4,	0|Scene::HIDE,1);
-	Scene::addElement(4,	1|Scene::HIDE,1);
+	go0element = Scene::addElement(4,	0|Scene::HIDE,1);
+	go1element = Scene::addElement(4,	1|Scene::HIDE,1);
 
 	while(1)
 	{
