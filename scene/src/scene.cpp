@@ -244,45 +244,55 @@ namespace Scene
 			return false;
 		}
 
+		void NOINLINE unhappyCubeEvents()
+		{
+			CubeSet current = CubeSet::connected();
+			unsigned i;
+			while(attentionCubes.clearFirst(i))
+			{
+				if(current.test(i))
+				{
+					// cube is connected
+					if(allocate(i))
+					{
+						SCENELOG("SCENE: new allocation of cube %d\n", i);
+						resetEvent = true;
+					}
+				}
+				else
+				{
+					// cube is not connected
+					if(deallocate(i))
+					{
+						SCENELOG("SCENE: deallocation of cube %d\n", i);
+						resetEvent = true;
+					}
+				}
+			}
+		}
+
+		void NOINLINE unhappyResetEvent()
+		{
+			SCENELOG("SCENE: detaching all video\n");
+			// detach all the video buffers. Yes, I'm serious
+			START_TIMER;
+			for(uint8_t i=0; i<CUBE_ALLOCATION; i++)
+			{
+				fastDetach(i);
+				CubeID(i).detachMotionBuffer();
+			}
+			END_TIMER;
+		}
+
 		bool pumpEvents()
 		{
 			if(!attentionCubes.empty())
 			{
-				CubeSet current = CubeSet::connected();
-				unsigned i;
-				while(attentionCubes.clearFirst(i))
-				{
-					if(current.test(i))
-					{
-						// cube is connected
-						if(allocate(i))
-						{
-							SCENELOG("SCENE: new allocation of cube %d\n", i);
-							resetEvent = true;
-						}
-					}
-					else
-					{
-						// cube is not connected
-						if(deallocate(i))
-						{
-							SCENELOG("SCENE: deallocation of cube %d\n", i);
-							resetEvent = true;
-						}
-					}
-				}
+				unhappyCubeEvents();
 			}
 			if(resetEvent)
 			{
-				SCENELOG("SCENE: detaching all video\n");
-				// detach all the video buffers. Yes, I'm serious
-				START_TIMER;
-				for(uint8_t i=0; i<CUBE_ALLOCATION; i++)
-				{
-					CubeID(i).detachVideoBuffer();
-					CubeID(i).detachMotionBuffer();
-				}
-				END_TIMER;
+				unhappyResetEvent();
 			}
 			return resetEvent;
 		}
@@ -414,6 +424,174 @@ namespace Scene
 		return sceneSize++;
 	}
 
+	void NOINLINE unhappyScene(Handler &handler)
+	{
+		Scene::reset();
+		handler.cubeCount( cubeMapping.getCubeCount() );
+		cubeMapping.attachAllMotion(handler);
+		resetEvent = false;	// mark reset event as correctly handled
+	}
+
+	void NOINLINE unhappyAttach(const BitArray<CUBE_ALLOCATION> &attachPending)
+	{
+		for(uint8_t cube : attachPending)
+		{
+			uint8_t physical = cubeMapping.physical(cube);
+			fastAttach(physical, vid[cube]);
+		}
+	}
+
+	void NOINLINE unhappyLoader()
+	{
+		// if no sync, do every cube individually
+		if(syncMode == Scene::SYNC_NONE)
+		{
+			for(uint8_t i : cubesLoading)
+			{
+				float progress = assetLoader.cubeProgress(i);
+				uint8_t logical = cubeMapping.logical(i);
+				loadingScreen->update(logical, progress, vid[logical]);
+				if(assetLoader.isComplete(i))
+				{
+					SCENELOG("SCENE: Completed download to cube %d\n", i);
+					fastDetach(i);
+					cubesLoading.clear(i);
+				}
+			}
+		}
+		else
+		{
+			float progress = assetLoader.averageProgress();	// same progress on all cubes
+			for(uint8_t i : cubesLoading)
+			{
+				uint8_t logical = cubeMapping.logical(i);
+				loadingScreen->update(logical, progress, vid[logical]);
+			}
+			if(assetLoader.isComplete())
+			{
+				SCENELOG("SCENE: Completed download to all cubes\n");
+				for(uint8_t i : cubesLoading)
+				{
+					fastDetach(i);
+				}
+				cubesLoading.clear();
+			}
+		}
+		if(cubesLoading.empty())
+		{
+			assetLoader.finish();
+			timeStep.next();			// reset the frame clock
+		}
+	}
+
+	BitArray<CUBE_ALLOCATION> dirty;;			// mark cubes that are drawn on, you can't mode switch until they paint
+	BitArray<CUBE_ALLOCATION> attachPending;	// mark cubes that were drawn on in detached mode
+	BitArray<SCENE_MAX_SIZE> todo;
+
+	void NOINLINE unhappyDraw(Handler &handler, unsigned i, bool drawBan)
+	{
+		Element &element = sceneBuffer[i];
+		uint8_t cube = element.cube;
+		uint8_t physical = cubeMapping.physical(cube);
+		uint8_t currentMode = currentModes[cube];
+		uint8_t elementMode = elementModes[i];
+
+		if(dirty.test(cube))
+		{
+			redraw.mark(i);
+		}
+		else
+		{
+			// in the wrong mode, so need to do a mode switch
+			// but first you need to check assets for this mode
+			AssetConfiguration<ASSET_CAPACITY> *pAssets = handler.requestAssets(cube, elementMode);
+			bool alreadyInstalled = true;
+			if(pAssets)
+			{
+				for(AssetConfigurationNode node : *pAssets)
+				{
+					if(!node.group()->isInstalled(physical))
+					{
+						alreadyInstalled = false;
+						break;
+					}
+				}
+			}
+			// if not already installed, you need to start a loader on this cube
+			if(!alreadyInstalled)
+			{
+				if(cubesLoading.empty())
+				{
+					SCENELOG("SCENE: Opening a new loader\n");
+					assetLoader.init();
+				}
+				SCENELOG("SCENE: Beginning download to cube %d\n", cube);
+				assetLoader.start(*pAssets, CubeSet(physical));
+				cubesLoading.mark(physical);
+				currentMode = currentModes[cube] = NO_MODE;
+
+				// allow for a multimodal loading screen
+				bool loadingScreenReady = false;
+				uint8_t loadingScreenPart = 0;
+				while(!loadingScreenReady)
+				{
+					fastDetach(physical);
+					loadingScreenReady = loadingScreen->init(cube, vid[cube], loadingScreenPart);
+					fastAttach(physical, vid[cube]);
+					loadingScreen->onAttach(cube, vid[cube], loadingScreenPart);
+					if(!loadingScreenReady)
+					{
+						System::paintUnlimited();
+						loadingScreenPart++;
+					}
+				}
+				redraw.mark(i);	// queue this item after at least one loader paint cycle
+			}
+			else if(!drawBan)
+			{
+				// ok to perform the mode switch, and may as well attach right now
+				SCENELOG("SCENE: Mode switch of cube %d\n", cube);
+				SCENELOG("SCENE: Detach old\n");
+				START_TIMER;
+				fastDetach(physical);
+				END_TIMER;
+				// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
+				SCENELOG("SCENE: Attach new\n");
+				START_TIMER;
+				bool attachNow = handler.switchMode(cube, elementMode, vid[cube]);
+				currentMode = currentModes[cube] = elementMode;
+				if(attachNow)
+				{
+					fastAttach(physical, vid[cube]);
+				}
+				else
+				{
+					attachPending.mark(cube);
+				}
+				END_TIMER;
+				// on a mode switch, any active objects in this mode on this cube need to be redrawn ASAP
+				// for the moment, loop through all items to find matches.
+				SCENELOG("SCENE: Refresh redraw list\n");
+				START_TIMER;
+				for(unsigned j : initialDraw)
+				{
+					Element *resync = sceneBuffer + j;
+					uint8_t resyncMode = elementModes[j];
+					if((currentMode == resyncMode) && (resync->cube==cube))
+					{
+						todo.mark(j);
+					}
+				}
+				END_TIMER;
+			}
+			else
+			{
+				// mode switch was requested but drawing was banned
+				redraw.mark(i);
+			}
+		}
+	}
+
 	int32_t doRedraw(Handler &handler)
 	{
 		ASSERT(loadingScreen != 0);
@@ -435,9 +613,9 @@ namespace Scene
 			// if we are in full sync mode and a download is taking place, drawing is banned.
 			bool drawBan = (syncMode == Scene::SYNC_FULL) && (!cubesLoading.empty());
 
-			BitArray<CUBE_ALLOCATION> dirty(0,0);			// mark cubes that are drawn on, you can't mode switch until they paint
-			BitArray<CUBE_ALLOCATION> attachPending(0,0);	// mark cubes that were drawn on in detached mode
-			BitArray<SCENE_MAX_SIZE> todo = redraw;
+			dirty.clear();
+			attachPending.clear();
+			todo = redraw;
 			redraw.clear();
 
 			unsigned i;
@@ -477,160 +655,29 @@ namespace Scene
 					}
 				}
 				// if the cube is dirty, just requeue this one for after the next paint event
-				else if(dirty.test(cube))
-				{
-					redraw.mark(i);
-				}
 				else
 				{
-					// in the wrong mode, so need to do a mode switch
-					// but first you need to check assets for this mode
-					AssetConfiguration<ASSET_CAPACITY> *pAssets = handler.requestAssets(cube, elementMode);
-					bool alreadyInstalled = true;
-					if(pAssets)
-					{
-						for(AssetConfigurationNode node : *pAssets)
-						{
-							if(!node.group()->isInstalled(physical))
-							{
-								alreadyInstalled = false;
-								break;
-							}
-						}
-					}
-					// if not already installed, you need to start a loader on this cube
-					if(!alreadyInstalled)
-					{
-						if(cubesLoading.empty())
-						{
-							SCENELOG("SCENE: Opening a new loader\n");
-							assetLoader.init();
-						}
-						SCENELOG("SCENE: Beginning download to cube %d\n", cube);
-						assetLoader.start(*pAssets, CubeSet(physical));
-						cubesLoading.mark(physical);
-						currentMode = currentModes[cube] = NO_MODE;
-
-						// allow for a multimodal loading screen
-						bool loadingScreenReady = false;
-						uint8_t loadingScreenPart = 0;
-						while(!loadingScreenReady)
-						{
-							CubeID(physical).detachVideoBuffer();
-							loadingScreenReady = loadingScreen->init(cube, vid[cube], loadingScreenPart);
-							vid[cube].attach(physical);
-							loadingScreen->onAttach(cube, vid[cube], loadingScreenPart);
-							if(!loadingScreenReady)
-							{
-								System::paintUnlimited();
-								loadingScreenPart++;
-							}
-						}
-						redraw.mark(i);	// queue this item after at least one loader paint cycle
-					}
-					else if(!drawBan)
-					{
-						// ok to perform the mode switch, and may as well attach right now
-						SCENELOG("SCENE: Mode switch of cube %d\n", cube);
-						SCENELOG("SCENE: Detach old\n");
-						START_TIMER;
-						CubeID(physical).detachVideoBuffer();
-						END_TIMER;
-						// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
-						SCENELOG("SCENE: Attach new\n");
-						START_TIMER;
-						bool attachNow = handler.switchMode(cube, elementMode, vid[cube]);
-						currentMode = currentModes[cube] = elementMode;
-						if(attachNow)
-						{
-							vid[cube].attach(physical);
-						}
-						else
-						{
-							attachPending.mark(cube);
-						}
-						END_TIMER;
-						// on a mode switch, any active objects in this mode on this cube need to be redrawn ASAP
-						// for the moment, loop through all items to find matches.
-						SCENELOG("SCENE: Refresh redraw list\n");
-						START_TIMER;
-						for(unsigned j : initialDraw)
-						{
-							Element *resync = sceneBuffer + j;
-							uint8_t resyncMode = elementModes[j];
-							if((currentMode == resyncMode) && (resync->cube==cube))
-							{
-								todo.mark(j);
-							}
-						}
-						END_TIMER;
-					}
-					else
-					{
-						// mode switch was requested but drawing was banned
-						redraw.mark(i);
-					}
+					unhappyDraw(handler, i, drawBan);
 				}
 			}
 
 			// attach any cubes that you queued up for later
-			for(uint8_t cube : attachPending)
+			if(!attachPending.empty())
 			{
-				uint8_t physical = cubeMapping.physical(cube);
-				vid[cube].attach(physical);
+				unhappyAttach(attachPending);
 			}
 
 			// yield a while (in indeterminate state)
-			if(Scene::paint())
+			System::paint();
+			if(cubeMapping.pumpEvents())
 			{
-				Scene::reset();
-				handler.cubeCount( cubeMapping.getCubeCount() );
-				cubeMapping.attachAllMotion(handler);
-				resetEvent = false;	// mark reset event as correctly handled
+				unhappyScene(handler);
 			}
 
 			// check for loading cubes that have finished
 			if(!cubesLoading.empty())
 			{
-				// if no sync, do every cube individually
-				if(syncMode == Scene::SYNC_NONE)
-				{
-					for(uint8_t i : cubesLoading)
-					{
-						float progress = assetLoader.cubeProgress(i);
-						uint8_t logical = cubeMapping.logical(i);
-						loadingScreen->update(logical, progress, vid[logical]);
-						if(assetLoader.isComplete(i))
-						{
-							SCENELOG("SCENE: Completed download to cube %d\n", i);
-							CubeID(i).detachVideoBuffer();
-							cubesLoading.clear(i);
-						}
-					}
-				}
-				else
-				{
-					float progress = assetLoader.averageProgress();	// same progress on all cubes
-					for(uint8_t i : cubesLoading)
-					{
-						uint8_t logical = cubeMapping.logical(i);
-						loadingScreen->update(logical, progress, vid[logical]);
-					}
-					if(assetLoader.isComplete())
-					{
-						SCENELOG("SCENE: Completed download to all cubes\n");
-						for(uint8_t i : cubesLoading)
-						{
-							CubeID(i).detachVideoBuffer();
-						}
-						cubesLoading.clear();
-					}
-				}
-				if(cubesLoading.empty())
-				{
-					assetLoader.finish();
-					timeStep.next();			// reset the frame clock
-				}
+				unhappyLoader();
 			}
 		}
 		while(!redraw.empty() || !cubesLoading.empty());

@@ -15,6 +15,8 @@ namespace Scene
 		friend int32_t execute(Handler &h);
 		friend int32_t doRedraw(Handler &h);
 		friend class CubeMapping;
+		friend void unhappyScene(Handler &h);
+		friend void unhappyDraw(Handler &handler, unsigned i, bool drawBan);
 	protected:
 		// mode functions
 		virtual Sifteo::AssetConfiguration<ASSET_CAPACITY> *requestAssets(uint8_t cube, uint8_t mode) = 0;

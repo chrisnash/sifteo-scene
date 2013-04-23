@@ -13,6 +13,8 @@ namespace Scene
 	class LoadingScreen
 	{
 		friend int32_t doRedraw(Handler &h);
+		friend void unhappyLoader();
+		friend void unhappyDraw(Handler &handler, unsigned i, bool drawBan);
 	protected:
 		virtual bool init(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part) = 0;
 		virtual void onAttach(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part) = 0;
