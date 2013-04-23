@@ -30,6 +30,8 @@ uint16_t ballElement;
 uint16_t ballSlave;
 uint16_t bat0element;
 uint16_t bat1element;
+uint16_t score0element;
+uint16_t score1element;
 
 Sifteo::Random rng;
 
@@ -163,6 +165,12 @@ public:
 						{
 							ball.server = 0;
 							el.setUpdate(120);	// reserve the ball in 2 seconds
+							Scene::Element &sc = Scene::getElement(score1element);
+							if(sc.data[0] < 9)
+							{
+								sc.data[0]++;
+								sc.repaint();
+							}
 						}
 						else
 						{
@@ -187,6 +195,12 @@ public:
 						{
 							ball.server = 1;
 							el.setUpdate(120);	// reserve the ball in 2 seconds
+							Scene::Element &sc = Scene::getElement(score0element);
+							if(sc.data[0] < 9)
+							{
+								sc.data[0]++;
+								sc.repaint();
+							}
 						}
 						else
 						{
@@ -289,8 +303,8 @@ void main()
 	bat1element = Scene::addElement(2,	1,0, Scene::FULL_UPDATE, Scene::NO_UPDATE, &bat2);
 
 	// score
-	Scene::addElement(3,	0,0);
-	Scene::addElement(3,	1,0);
+	score0element = Scene::addElement(3,	0,0);
+	score1element = Scene::addElement(3,	1,0);
 
 	// game over
 	Scene::addElement(4,	0|Scene::HIDE,1);
