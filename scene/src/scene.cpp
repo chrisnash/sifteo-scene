@@ -572,6 +572,7 @@ namespace Scene
 						if(assetLoader.isComplete(i))
 						{
 							SCENELOG("SCENE: Completed download to cube %d\n", i);
+							CubeID(i).detachVideoBuffer();
 							cubesLoading.clear(i);
 						}
 					}
@@ -587,6 +588,10 @@ namespace Scene
 					if(assetLoader.isComplete())
 					{
 						SCENELOG("SCENE: Completed download to all cubes\n");
+						for(uint8_t i : cubesLoading)
+						{
+							CubeID(i).detachVideoBuffer();
+						}
 						cubesLoading.clear();
 					}
 				}
