@@ -36,6 +36,7 @@ namespace Scene
 
 	// video buffers
 	VideoBuffer vid[CUBE_ALLOCATION];
+	VideoBuffer *currentlyAttached[CUBE_ALLOCATION];
 
 	// Asset loader
 	AssetLoader assetLoader;
@@ -45,6 +46,35 @@ namespace Scene
 	// The frame threshold. Log a warning if the update counter is too large.
 	// The default value assumes updates are within 10Hz
 	uint8_t frameThreshold = 0x06;
+
+	void fastAttach(uint8_t physical, VideoBuffer &v)
+	{
+		if(currentlyAttached[physical] != &v)
+		{
+			if(currentlyAttached[physical])
+			{
+				// if attached anywhere else
+				v.attach(CubeID(physical));
+			}
+			else
+			{
+				// we can do a low level attach without a finish
+		        v.sys.cube = CubeID(physical);
+		        _SYS_vbuf_init(v);
+		        _SYS_setVideoBuffer(v, v);
+			}
+			currentlyAttached[physical] = &v;
+		}
+	}
+
+	void fastDetach(uint8_t physical)
+	{
+		if(currentlyAttached[physical])
+		{
+			CubeID(physical).detachVideoBuffer();
+			currentlyAttached[physical] = NULL;
+		}
+	}
 
 	class DefaultLoadingScreen : public LoadingScreen
 	{
@@ -88,6 +118,7 @@ namespace Scene
 				toLogical[i] = CubeID::UNDEFINED;
 			}
 			connectionMap.clear();
+			Sifteo::bzero(currentlyAttached);
 		}
 
 		// allocate a physical cube to a logical slot
