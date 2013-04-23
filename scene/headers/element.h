@@ -27,6 +27,8 @@ namespace Scene
 		void repaint();			// repaint this element
 		void clearUpdate();
 		void setUpdate(uint8_t update=1);
+		void show();
+		void hide();
 	};
 }
 #endif /* ELEMENT_H_ */

@@ -43,9 +43,6 @@ namespace Scene
 
 	bool neighborAt(uint8_t cube, uint8_t side, uint8_t &otherCube, uint8_t &otherSide);
 	void setFrameThreshold(uint8_t ft);
-
-	// yielding system call traps.
-	bool paint();
 }
 
 #endif /* SCENE_H_ */

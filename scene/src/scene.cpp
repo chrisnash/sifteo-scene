@@ -356,12 +356,6 @@ namespace Scene
 	}
 	eventHandler;
 
-	bool paint()
-	{
-		System::paint();
-		return cubeMapping.pumpEvents();
-	}
-
 	void reset()
 	{
 		// hard cancel any in-progress loaders
@@ -788,5 +782,21 @@ namespace Scene
 	void Element::clearUpdate()
 	{
 		setUpdate(0);
+	}
+
+	void Element::show()
+	{
+		uint16_t index = this - sceneBuffer;
+		ASSERT(index < sceneSize);
+		initialDraw.mark(index);
+		redraw.mark(index);
+	}
+
+	void Element::hide()
+	{
+		uint16_t index = this - sceneBuffer;
+		ASSERT(index < sceneSize);
+		initialDraw.clear(index);
+		redraw.clear(index);
 	}
 }
