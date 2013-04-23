@@ -37,8 +37,8 @@ namespace Scene
 	// API to build a scene directly into the buffer
 	void beginScene();
 
-	uint16_t addElement(uint8_t type, uint8_t cube, uint8_t mode, uint8_t update=NO_UPDATE, uint8_t autoupdate=NO_UPDATE, void *object=NULL);
-	Element &createElement(uint8_t type, uint8_t cube, uint8_t mode, void *object=NULL);
+	uint16_t addElement(uint8_t type, uint8_t cube=0, uint8_t mode=0, uint8_t update=NO_UPDATE, uint8_t autoupdate=NO_UPDATE, void *object=NULL);
+	Element &createElement(uint8_t type, uint8_t cube=0, uint8_t mode=0, void *object=NULL);
 
 	int32_t execute(Handler &handler);
 

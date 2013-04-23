@@ -775,9 +775,7 @@ namespace Scene
 
 	Element &Element::repaint()
 	{
-		uint16_t index = this - sceneBuffer;
-		ASSERT(index < sceneSize);
-		redraw.mark(index);
+		redraw.mark(index());
 		return *this;
 	}
 
@@ -805,19 +803,84 @@ namespace Scene
 
 	Element &Element::show()
 	{
-		uint16_t index = this - sceneBuffer;
-		ASSERT(index < sceneSize);
-		initialDraw.mark(index);
-		redraw.mark(index);
+		uint16_t i = index();
+		initialDraw.mark(i);
+		redraw.mark(i);
 		return *this;
 	}
 
 	Element &Element::hide()
 	{
-		uint16_t index = this - sceneBuffer;
-		ASSERT(index < sceneSize);
-		initialDraw.clear(index);
-		redraw.clear(index);
+		uint16_t i = index();
+		initialDraw.clear(i);
+		redraw.clear(i);
 		return *this;
+	}
+
+	Element &Element::setMode(uint8_t m)
+	{
+		mode() = m;
+		return *this;
+	}
+
+	uint8_t &Element::mode()
+	{
+		return elementModes[index()];
+	}
+
+	Element &Element::setCube(uint8_t c)
+	{
+		cube = c;
+		return *this;
+	}
+
+	Element &Element::setType(uint8_t t)
+	{
+		type = t;
+		return *this;
+	}
+
+	Element &Element::setObject(void *o)
+	{
+		object = o;
+		return *this;
+	}
+
+	uint16_t Element::index()
+	{
+		uint16_t i = this - sceneBuffer;
+		ASSERT(i <sceneSize);
+		return i;
+	}
+
+	Element *Element::shadow(uint8_t count)
+	{
+		// shadow elements have no update, but everything else is the same
+		for(uint8_t i=1; i<count; i++)
+		{
+			Scene::addElement(type, cube+i, mode(), Scene::NO_UPDATE, Scene::NO_UPDATE, object);
+		}
+		return this;
+	}
+
+	Element *Element::duplicate(uint8_t count)
+	{
+		// duplicate elements are identical in every respect
+		for(uint8_t i=1; i<count; i++)
+		{
+			Scene::addElement(type, cube+i, mode(), update, autoupdate, object);
+		}
+		return this;
+	}
+
+	Element *Element::fromTemplate(uint8_t count, void *objects[])
+	{
+		object = objects[0];
+		// templated elements are the same except for their object pointers
+		for(uint8_t i=1; i<count; i++)
+		{
+			Scene::addElement(type, cube+i, mode(), update, autoupdate, objects[i]);
+		}
+		return this;
 	}
 }
