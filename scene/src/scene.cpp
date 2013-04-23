@@ -677,10 +677,11 @@ namespace Scene
 		while(!redraw.empty() || !cubesLoading.empty());
 
 		handler.updateAllMotion(cubeMapping.getConnectionMap());
-		SCENELOG("SCENE: Refresh neighbors\n");
-		START_TIMER;
-		if(cubeMapping.refreshState()) handler.neighborAlert();							// sample motion and neighbor events
-		END_TIMER;
+		if(cubeMapping.refreshState())
+		{
+			SCENELOG("SCENE: Refresh neighbors\n");
+			handler.neighborAlert();							// sample motion and neighbor events
+		}
 
 		timeStep.next();									// get a time sample
 		uint8_t fc = frameRate.tick(timeStep.delta());		// figure out how much to advance the clock
