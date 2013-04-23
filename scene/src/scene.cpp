@@ -722,6 +722,7 @@ namespace Scene
 				else
 				{
 					element.update -= ur;
+					ur = 0;
 				}
 			}
 		}
