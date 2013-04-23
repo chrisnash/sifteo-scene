@@ -52,6 +52,7 @@ namespace Scene
 
 		uint8_t &mode();
 		uint16_t index();
+		bool visible();
 
 		Element *shadow(uint8_t count);
 		Element *duplicate(uint8_t count);

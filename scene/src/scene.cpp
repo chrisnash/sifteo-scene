@@ -853,22 +853,29 @@ namespace Scene
 		return i;
 	}
 
+	bool Element::visible()
+	{
+		return initialDraw.test(index());
+	}
+
 	Element *Element::shadow(uint8_t count)
 	{
-		// shadow elements have no update, but everything else is the same
+		// shadow elements have no update, but everything else is the same. Mask in hidden data
+		uint8_t hide = (visible() ? 0 : Scene::HIDE);
 		for(uint8_t i=1; i<count; i++)
 		{
-			Scene::addElement(type, cube+i, mode(), Scene::NO_UPDATE, Scene::NO_UPDATE, object);
+			Scene::addElement(type, (cube+i)|hide, mode(), Scene::NO_UPDATE, Scene::NO_UPDATE, object);
 		}
 		return this;
 	}
 
 	Element *Element::duplicate(uint8_t count)
 	{
-		// duplicate elements are identical in every respect
+		// duplicate elements are identical in every respect. Mask in hidden data
+		uint8_t hide = (visible() ? 0 : Scene::HIDE);
 		for(uint8_t i=1; i<count; i++)
 		{
-			Scene::addElement(type, cube+i, mode(), update, autoupdate, object);
+			Scene::addElement(type, (cube+i)|hide, mode(), update, autoupdate, object);
 		}
 		return this;
 	}
@@ -876,10 +883,11 @@ namespace Scene
 	Element *Element::fromTemplate(uint8_t count, void *objects[])
 	{
 		object = objects[0];
-		// templated elements are the same except for their object pointers
+		// templated elements are the same except for their object pointers. Mask in hidden data
+		uint8_t hide = (visible() ? 0 : Scene::HIDE);
 		for(uint8_t i=1; i<count; i++)
 		{
-			Scene::addElement(type, cube+i, mode(), update, autoupdate, objects[i]);
+			Scene::addElement(type, (cube+i)|hide, mode(), update, autoupdate, objects[i]);
 		}
 		return this;
 	}
