@@ -309,6 +309,7 @@ namespace Scene
 			attentionNeighbors.mark();
 			attentionCubes.mark();
 			cubeMapping.pumpEvents();
+			resetEvent = false;
 		}
 	}
 	eventHandler;
