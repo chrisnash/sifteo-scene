@@ -20,7 +20,7 @@ namespace Scene
 	protected:
 		// mode functions
 		virtual Sifteo::AssetConfiguration<ASSET_CAPACITY> *requestAssets(uint8_t cube, uint8_t mode) = 0;
-		virtual bool switchMode(uint8_t cube, uint8_t mode, Sifteo::VideoBuffer &v) = 0;
+		virtual bool switchMode(uint8_t cube, uint8_t mode, Sifteo::VideoBuffer &v, Sifteo::CubeID param) = 0;
 		// element functions
 		virtual void drawElement(Element &el, Sifteo::VideoBuffer &v) = 0;
 		virtual int32_t updateElement(Element &el, uint8_t fc=1) = 0;

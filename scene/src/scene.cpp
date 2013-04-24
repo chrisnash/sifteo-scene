@@ -557,7 +557,7 @@ namespace Scene
 				// some modes can be drawn detached (non-tile modes). You should defer these to save some radio.
 				SCENELOG("SCENE: Attach new\n");
 				START_TIMER;
-				bool attachNow = handler.switchMode(cube, elementMode, vid[cube]);
+				bool attachNow = handler.switchMode(cube, elementMode, vid[cube], CubeID(physical));
 				currentMode = currentModes[cube] = elementMode;
 				if(attachNow)
 				{

@@ -33,7 +33,7 @@ public:
 		return NULL;	// no assets for this guy
 	}
 
-	bool switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v)
+	bool switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v, CubeID param)
 	{
 		v.initMode(BG0_ROM);
 		return false;

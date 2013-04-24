@@ -69,7 +69,7 @@ public:
 	{
 		return (mode==0)? &assetconf : 0;
 	}
-	bool switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v)
+	bool switchMode(uint8_t cube, uint8_t mode, VideoBuffer &v, CubeID param)
 	{
 		switch(mode)
 		{
