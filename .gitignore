@@ -19,4 +19,4 @@
 assets.gen.*
 assets.html
 .DS_Store
-
+doc/
