@@ -858,6 +858,21 @@ namespace Scene
 		return initialDraw.test(index());
 	}
 
+	Element &Element::offset(int16_t o)
+	{
+		return Scene::getElement(index() + o);
+	}
+
+	Element &Element::next()
+	{
+		return offset(1);
+	}
+
+	Element &Element::prev()
+	{
+		return offset(-1);
+	}
+
 	Element *Element::shadow(uint8_t count)
 	{
 		// shadow elements have no update, but everything else is the same. Mask in hidden data

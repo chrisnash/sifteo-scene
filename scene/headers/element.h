@@ -58,6 +58,10 @@ namespace Scene
 		Element *duplicate(uint8_t count);
 		Element *fromTemplate(uint8_t count, void *objects[]);
 
+		Element &offset(int16_t offset);
+		Element &next();
+		Element &prev();
+
 		template<typename T>
 		T *objptr() {return (T*)object;}
 
