@@ -17,6 +17,12 @@ AssetSlot slot_1 = AssetSlot::allocate();
 AssetSlot slot_2 = AssetSlot::allocate();
 AssetSlot slot_3 = AssetSlot::allocate();
 
+// cache the sully image in uncompressed tile buffer RAM. This is overkill for this demo,
+// but does illustrate how it can be done.
+TileBuffer<16,16> tileBuffers[CUBE_ALLOCATION];
+// we also cache tile group base addresses, so we only have to redraw the tile buffer when absolutely needed.
+uint16_t baseAddresses[CUBE_ALLOCATION];
+
 class FancyLoadingScreen : public Scene::LoadingScreen
 {
 	virtual bool init(uint8_t cube, Sifteo::VideoBuffer &v, uint8_t part)
@@ -115,7 +121,18 @@ public:
 		switch(mode)
 		{
 		case 0:
-			v.initMode(BG0);
+			{
+				v.initMode(BG0);
+				// init the tile buffer and draw sully into RAM. Note we use a tile buffer to illustrate how the CubeID can be used to correctly tile relocate.
+				tileBuffers[cube].setCube(param);	// connect to the cube
+				uint16_t cba = Tiles.baseAddress(param);	// find out where the tiles group is on this cube
+				if(baseAddresses[cube] != cba)
+				{
+					// redraw the tile buffer to relocate the indices
+					baseAddresses[cube] = cba;
+					tileBuffers[cube].image(vec(0,0), Sully);
+				}
+			}
 			return true;					// attach immediately
 		case 1:
 			v.initMode(FB128, 112, 16);		// just the bottom 16 rows of the display
@@ -129,7 +146,8 @@ public:
 		switch(el.type)
 		{
 		case 0:
-			v.bg0.image(vec(0,0), Sully);
+			// draw from the tile buffer
+			v.bg0.image(vec(0,0), tileBuffers[el.cube]);
 			break;
 		case 1:
 			v.colormap[0] = RGB565::fromRGB(0x000080);
@@ -172,6 +190,9 @@ public:
 
 void main()
 {
+	// mark the tile buffer base addresses as unknown
+	for(int i=0;i<CUBE_ALLOCATION; i++) baseAddresses[i] = 0xFFFF;
+
 	// initialize scene
 	Scene::initialize();
 	FancyLoadingScreen fls;
