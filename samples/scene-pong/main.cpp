@@ -43,6 +43,9 @@ const uint8_t MAX_SCORE = 9;
 
 const int SCORE_1_X = 12;
 const int SCORE_2_X = 1;
+const int SCORE_Y = 1;
+const int SCORE_XS = 3;
+const int SCORE_YS = 5;
 
 // element group pointers (2 elements per group)
 Scene::Element *pBall;
@@ -54,6 +57,28 @@ Scene::Element *pSplashes;
 Sifteo::Random rng;
 
 // Object classes
+class BatObj
+{
+public:
+	float y;
+
+	void drawOn(Sifteo::VideoBuffer &v, uint8_t cube);
+	bool move(uint8_t cube);
+	bool missed(float ball);
+};
+
+class GameLogic
+{
+public:
+	static void serveBall(uint8_t player);
+	static void restartGame();
+	static void endGame();
+	static void scorePoint(uint8_t player);
+	static void xvyv(int a, float &xv, float &yv);
+	static void verticalMirror(int &a, float &xv, float &yv, int reference);
+	static void horizontalMirror(int &a, float &xv, float &yv);
+};
+
 class BallObj
 {
 public:
@@ -61,18 +86,210 @@ public:
 	float y;
 	uint8_t angle;	// multiple of 5 degrees
 	uint8_t server;
+
+	bool inPlay()
+	{
+		return (server==2);
+	}
+
+	void drawOn(Sifteo::VideoBuffer &v, uint8_t cube)
+	{
+		float xmin = ((cube==0) ? 0.0f : 128.0) - ballRadius;
+		float xmax = ((cube==0) ? 128.0f : 256.0) + ballRadius;
+		if((x >- xmin) && (x <= xmax) && inPlay() )
+		{
+			int _x = round(x - xmin - 2*ballRadius);
+			int _y = round(y - ballRadius);
+			v.sprites[0].setImage(Ball);
+			v.sprites[0].move(vec(_x,_y));
+		}
+		else
+		{
+			v.sprites[0].hide();
+		}
+	}
+
+	void performServe()
+	{
+		x = (server==0) ? (ballRadius + batWidth) : (256.0 - ballRadius - batWidth);
+		y = pBats[server].obj<BatObj>().y;
+		angle = Sifteo::umod( ((server==0)?0:36) + rng.randint(0,9)*2 - 9,72);
+		server = 2;
+	}
+
+	void doMotion(int a, float xv, float yv)
+	{
+		angle = a;
+		x += xv;
+		y += yv;
+	}
+
+	bool offLeft()
+	{
+		return (x < batWidth + ballRadius);
+	}
+	bool offRight()
+	{
+		return (x > 256.0 - batWidth - ballRadius);
+	}
+	bool offTop()
+	{
+		return (y<wallWidth+ballRadius);
+	}
+	bool offBottom()
+	{
+		return (y>128.0-wallWidth-ballRadius);
+	}
+
+	void update(Scene::Element &el)
+	{
+		if(!inPlay())
+		{
+			performServe();
+			el.fullUpdate();
+		}
+		else
+		{
+			float xv, yv;
+			int a = angle;
+			GameLogic::xvyv(a, xv, yv);
+			// bounce of left and right edges
+			// left
+			if( offLeft() && (xv<0.0))
+			{
+				// hit bat 0?
+				if( pBats[0].obj<BatObj>().missed(y) )
+				{
+					GameLogic::scorePoint(1);
+				}
+				else
+				{
+					GameLogic::verticalMirror(a, xv, yv, 0);
+				}
+			}
+			else if( offRight() && (xv>0.0) )
+			{
+				// hit bat 1?
+				if( pBats[1].obj<BatObj>().missed(y) )
+				{
+					GameLogic::scorePoint(0);
+				}
+				else
+				{
+					GameLogic::verticalMirror(a, xv, yv, 36);
+				}
+			}
+
+			if( offTop() && (yv<0.0) )
+			{
+				GameLogic::horizontalMirror(a, xv, yv);
+			}
+			else if( offBottom() && (yv>0.0) )
+			{
+				GameLogic::horizontalMirror(a, xv, yv);
+			}
+			if(inPlay())	// still in play
+			{
+				doMotion(a, xv, yv);
+			}
+		}
+		el.repaint().next().repaint();
+	}
 };
 
-class BatObj
+void BatObj::drawOn(Sifteo::VideoBuffer &v, uint8_t cube)
 {
-public:
-	float y;
-};
+	int _y = round(y - batLength/2);
+	int _x = (cube==0)?0:120;
+	v.sprites[1].setImage(Bats, cube);
+	v.sprites[1].move(vec(_x,_y));
+}
 
-class GameLogic
+bool BatObj::move(uint8_t cube)
 {
-
+	BallObj &ball = pBall[0].obj<BallObj>();
+	if(ball.inPlay())
+	{
+		float batx = (cube == 0) ? 0.0f : 256.0f;
+		if(abs(ball.x - batx) < vision)
+		{
+			// move the bat
+			if(y < ball.y - batCloseness) y += batVelocity;
+			else if(y > ball.y + batCloseness) y -= batVelocity;
+			if(y < wallWidth + batLength/2) y = wallWidth + batLength/2;
+			if(y > 128.0 - wallWidth - batLength/2) y = 128.0 - wallWidth - batLength/2;
+			return true;
+		}
+	}
+	return false;	// didn't move it
 };
+
+bool BatObj::missed(float ball)
+{
+	return (ball < y - batLength/2 - ballRadius) || (ball > y + batLength/2 + ballRadius);
+}
+
+void GameLogic::serveBall(uint8_t player)
+{
+	pBall[0].setUpdate(SERVE_TIME).obj<BallObj>().server = player;
+}
+
+void GameLogic::restartGame()
+{
+	// set the ball to serve
+	serveBall(0);
+
+	// set the scores to zero and repaint, that will make the entire layer 0 repaint anyway
+	pScores[0].repaint().d8 = 0;
+	pScores[1].repaint().d8 = 0;
+
+	pBats[0].fullUpdate().next().fullUpdate();
+	pSplashes[0].hide().next().hide();
+}
+
+void GameLogic::endGame()
+{
+	// stop game elements updating
+	pBall[0].clearUpdate();
+	pBats[0].clearUpdate().next().clearUpdate();
+	pSplashes[0].setUpdate(SPLASH_TIME).show().next().show();
+}
+
+void GameLogic::scorePoint(uint8_t player)
+{
+	// other guy serves
+	serveBall(1-player);
+	// repaint and increase guy's score
+	if( ++(pScores[player].repaint().d8) == MAX_SCORE)
+	{
+		endGame();
+	}
+}
+
+// convert angles to velocities
+void GameLogic::xvyv(int a, float &xv, float &yv)
+{
+	int angle = (8192*a + 36)/72;
+	int s = Sifteo::tsini(angle); int c = Sifteo::tcosi(angle);
+	xv = (ballVelocity*c)/65536; yv = (ballVelocity*s)/65536;
+}
+
+// vertical mirror, add some random noise and check within 45 degrees
+void GameLogic::verticalMirror(int &a, float &xv, float &yv, int reference)
+{
+	a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
+	// angle must be between -9 and 9 of reference
+	int offset = Sifteo::umod(a - reference, 72); if(offset>=36) offset-=72;	// -36 to + 36
+	if(offset<-9) a = Sifteo::umod(reference-9, 72);
+	if(offset>9) a = Sifteo::umod(reference+9, 72);
+	xvyv(a, xv, yv);
+}
+
+void GameLogic::horizontalMirror(int &a, float &xv, float &yv)
+{
+	a = Sifteo::umod(-a,72);
+	xvyv(a, xv, yv);
+}
 
 // Object instantiation
 BallObj _ball;
@@ -99,7 +316,7 @@ public:
 		{
 			v.initMode(BG0_SPR_BG1);
 			// create the BG1 mask
-			v.bg1.fillMask(vec((cube==0)?12:1,1), vec(3,5));
+			v.bg1.fillMask(vec((cube==0)?SCORE_1_X:SCORE_2_X,SCORE_Y), vec(SCORE_XS,SCORE_YS));
 			return true;	// tile based
 		}
 		else
@@ -115,210 +332,49 @@ public:
 	{
 		switch(el.type)
 		{
-		case 0:	// board
+		case TYPE_BOARD:	// board
 			v.bg0.image(vec(0,0), Board, el.cube);		// frame number is cube
 			break;
-		case 1: // ball
-			{
-				BallObj &ball = el.obj<BallObj>();
-				float xmin = ((el.cube==0) ? 0.0f : 128.0) - ballRadius;
-				float xmax = ((el.cube==0) ? 128.0f : 256.0) + ballRadius;
-				if((ball.x >- xmin) && (ball.x <= xmax) && (ball.server==2) )
-				{
-					int x = round(ball.x - xmin - 2*ballRadius);
-					int y = round(ball.y - ballRadius);
-					v.sprites[0].setImage(Ball);
-					v.sprites[0].move(vec(x,y));
-				}
-				else
-				{
-					v.sprites[0].hide();
-				}
-			}
+		case TYPE_BALL: // ball
+			el.obj<BallObj>().drawOn(v, el.cube);
 			break;
-		case 2: // bat
-			{
-				BatObj &bat = el.obj<BatObj>();
-				int y = round(bat.y - batLength/2);
-				int x = (el.cube==0)?0:120;
-				v.sprites[1].setImage(Bats, el.cube);
-				v.sprites[1].move(vec(x,y));
-			}
+		case TYPE_BAT: // bat
+			el.obj<BatObj>().drawOn(v, el.cube);
 			break;
-		case 3: // score
-			v.bg1.image(vec((el.cube==0)?12:1,1), Digits, el.data[0]);
+		case TYPE_SCORE: // score
+			v.bg1.image(vec((el.cube==0)?SCORE_1_X:SCORE_2_X,SCORE_Y), Digits, el.d8);
 			break;
-		case 4: // game over message
+		case TYPE_SPLASH: // game over message
 			Font::drawCentered(v, vec(0,0), vec(128,32), "GAME OVER");
 			break;
 		}
 	}
 
-	void xvyv(int a, float &xv, float &yv)
-	{
-		int angle = (8192*a + 36)/72;
-		int s = Sifteo::tsini(angle); int c = Sifteo::tcosi(angle);
-		xv = (ballVelocity*c)/65536; yv = (ballVelocity*s)/65536;
-	}
+
 
 	int32_t updateElement(Scene::Element &el, uint8_t fc=0)
 	{
 		switch(el.type)
 		{
-		case 1: // ball
+		case TYPE_BALL: // ball
+			el.obj<BallObj>().update(el);
+			break;
+		case TYPE_BAT: // bat
+			if(el.obj<BatObj>().move(el.cube))
 			{
-				BallObj &ball = *((BallObj*)el.object);
-				if(ball.server !=2)
-				{
-					// ready to serve the ball
-					BatObj &bat= pBats[ball.server].obj<BatObj>();
-					ball.x = (ball.server==0) ? (ballRadius + batWidth) : (256.0 - ballRadius - batWidth);
-					ball.y = bat.y;
-					// -9 +9
-					ball.angle = Sifteo::umod( ((ball.server==0)?0:36) + rng.randint(0,9)*2 - 9,72);
-					ball.server = 2;
-					el.setUpdate(Scene::FULL_UPDATE);
-				}
-				else
-				{
-					float xv, yv;
-					int a = ball.angle;
-					xvyv(a, xv, yv);
-					// bounce of left and right edges
-					// left
-					if( (ball.x < batWidth + ballRadius) && (xv<0.0))
-					{
-						// hit bat 0?
-						BatObj &bat = pBats[0].obj<BatObj>();
-						if( (ball.y < bat.y - batLength/2 - ballRadius) || (ball.y > bat.y + batLength/2 + ballRadius) )
-						{
-							ball.server = 0;
-							el.setUpdate(SERVE_TIME);	// reserve the ball in 2 seconds
-							Scene::Element &sc = pScores[1];
-							sc.repaint().data[0]++;
-							if( ++(sc.repaint()).data[0] == MAX_SCORE)
-							{
-								// stop game elements updating
-								pBall[0].clearUpdate();
-								pBats[0].clearUpdate();
-								pBats[1].clearUpdate();
-								pSplashes[0].setUpdate(SPLASH_TIME).show();
-								pSplashes[1].show();
-							}
-						}
-						else
-						{
-							a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
-							// angle must be between -9 and 9
-							if(a>=36)
-							{
-								if(a<63) a=63;
-							}
-							else
-							{
-								if(a>9) a=9;
-							}
-							xvyv(a, xv, yv);
-						}
-					}
-					else if( (ball.x > 256.0 - batWidth - ballRadius) && (xv>0.0) )
-					{
-						// hit bat 1?
-						BatObj &bat = pBats[1].obj<BatObj>();
-						if( (ball.y < bat.y - batLength/2 - ballRadius) || (ball.y > bat.y + batLength/2 + ballRadius) )
-						{
-							ball.server = 1;
-							el.setUpdate(SERVE_TIME);	// reserve the ball in 2 seconds
-							Scene::Element &sc = pScores[0];
-							if( ++(sc.repaint()).data[0] == MAX_SCORE)
-							{
-								// stop game elements updating
-								pBall[0].clearUpdate();
-								pBats[0].clearUpdate();
-								pBats[1].clearUpdate();
-								pSplashes[0].setUpdate(SPLASH_TIME).show();
-								pSplashes[1].show();
-							}
-
-						}
-						else
-						{
-							a = Sifteo::umod(36-a + 2*rng.randint(-1,1), 72);
-							// between 27 and 45
-							if(a<27) a = 27;
-							if(a>45) a = 45;
-							xvyv(a, xv, yv);
-						}
-					}
-
-					if( (ball.y<wallWidth+ballRadius) && (yv<0.0) )
-					{
-						a = Sifteo::umod(-a,72);
-						xvyv(a, xv, yv);
-					}
-					if( (ball.y>128.0-wallWidth-ballRadius) && (yv>0.0) )
-					{
-						a = Sifteo::umod(-a,72);
-						xvyv(a, xv, yv);
-					}
-					if(ball.server == 2)	// still in play
-					{
-						ball.angle = a;
-						ball.x += xv;
-						ball.y += yv;
-					}
-				}
 				el.repaint();
-				pBall[1].repaint();	// and the shadow
 			}
 			break;
-		case 2: // bat
-			{
-				BallObj &ball = pBall[0].obj<BallObj>();
-				if(ball.server == 2)	// only if the ball is in play
-				{
-					BatObj &bat = el.obj<BatObj>();
-					float batx = (el.cube == 0) ? 0.0f : 256.0f;
-					if(abs(ball.x - batx) < vision)
-					{
-						// move the bat
-						if(bat.y < ball.y - batCloseness) bat.y += batVelocity;
-						else if(bat.y > ball.y + batCloseness) bat.y -= batVelocity;
-						if(bat.y < wallWidth + batLength/2) bat.y = wallWidth + batLength/2;
-						if(bat.y > 128.0 - wallWidth - batLength/2) bat.y = 128.0 - wallWidth - batLength/2;
-						el.repaint();
-					}
-				}
-			}
-			break;
-		case 4:	// game over
-			{
-				// reset the scores and all the elements to update again
-				Scene::Element &be = pBall[0];
-				BallObj &ball = be.obj<BallObj>();
-				ball.server = 0;
-				be.setUpdate(SERVE_TIME);
-
-				// set the scores to zero and repaint, that will make the entire layer 0 repaint anyway
-				pScores[0].repaint().data[0] = 0;
-				pScores[1].repaint().data[0] = 0;
-
-				pBats[0].fullUpdate();
-				pBats[1].fullUpdate();
-				pSplashes[0].hide();
-				pSplashes[1].hide();
-			}
+		case TYPE_SPLASH:	// game over timer expired
+			GameLogic::restartGame();
 			break;
 		}
-		return 0;	// just say it's never returning
+		return 0;	// just say it's never returning from scene
 	}
 
 	void cubeCount(uint8_t cubes) {}
-
 	void neighborAlert() {}
-
 	void attachMotion(uint8_t cube, Sifteo::CubeID parameter) {}
-
 	void updateAllMotion(const Sifteo::BitArray<CUBE_ALLOCATION> &cubeMap) {}
 };
 
@@ -352,6 +408,7 @@ void main()
 	// game over
 	pSplashes = Scene::createElement(TYPE_SPLASH).setMode(1).hide().duplicate(2);
 
+	GameLogic::restartGame();
 	while(1)
 	{
 		int32_t code = Scene::execute(sh);			// this call never returns because we have no update methods.
