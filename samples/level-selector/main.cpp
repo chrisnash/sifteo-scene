@@ -17,6 +17,8 @@ AssetSlot slot_1 = AssetSlot::allocate();
 AssetSlot slot_2 = AssetSlot::allocate();
 AssetSlot slot_3 = AssetSlot::allocate();
 
+Scene::Element *scrollRegister;
+Scene::Element *scrollers;
 
 class TextField
 {
@@ -26,6 +28,7 @@ public:
 
 // how big an entry is in the window
 const int8_t windowSize = 12;
+const int16_t scrollMax = 96;
 // how many rows by default we try to buffer in both directions
 const int8_t bidiLookahead = 2;
 // how many rows we aim to buffer when scrolling
@@ -40,9 +43,7 @@ public:
 	int8_t windowStart = 0;
 	int8_t windowEnd = 0;
 
-	uint16_t previousItem = 0x0000;
-	uint16_t currentItem = 0x0000;
-	uint16_t nextItem = 0x0000;
+	uint16_t itemBuffer[3] = {0,0,0};		// previous, current, next
 
 	virtual void doRender(Sifteo::VideoBuffer &v, uint32_t bufferLine, uint16_t item, uint32_t itemLine) = 0;
 	virtual int xoffset() = 0;
@@ -50,23 +51,25 @@ public:
 
 	void renderLine(Sifteo::VideoBuffer &v, int16_t l)
 	{
-		int16_t bufferLine = Sifteo::umod(windowOffset + l, 18);
-		if(l<0)
+		uint32_t bufferLine = Sifteo::umod(windowOffset + l, 18);
+		int16_t imageOffset = Sifteo::umod(l, windowSize);
+		int16_t imageIndex = ((l - imageOffset) / windowSize) + 1;
+
+		//LOG("Rendering line %d image offset %d image index %d to buffer %d\n", l, imageOffset, imageIndex, bufferLine);
+
+		if((imageIndex<0)||(imageIndex>2))
 		{
-			doRender(v, bufferLine, previousItem, l+windowSize);
-		}
-		else if(l>=windowSize)
-		{
-			doRender(v, bufferLine, nextItem, l-windowSize);
+			v.bg0.fill( vec(0U, bufferLine), vec(17U, 1U), Black);
 		}
 		else
 		{
-			doRender(v, bufferLine, currentItem, l);
+			doRender(v, bufferLine, itemBuffer[imageIndex], imageOffset);
 		}
 	}
 
 	void draw(Sifteo::VideoBuffer &v, int16_t scrollOffset = 0)
 	{
+		//LOG("Drawing item with scroll offset %d\n", scrollOffset);
 		// calculate the first and last lines needed on the screen
 		int16_t startLine = (scrollOffset >> 3);	// rounded down
 		int16_t endLine = (scrollOffset + windowSize*8 +7) >> 3;
@@ -86,6 +89,14 @@ public:
 			startLine -= bidiLookahead;
 			endLine += bidiLookahead;
 		}
+		//LOG("Current buffer status: %d,%d\n", windowStart, windowEnd);
+		//LOG("Requested buffer status: %d,%d\n", startLine, endLine);
+
+		// if there's no window overlap at all, reset the window (typically we are empty or reset)
+		if((windowEnd<=startLine)||(windowStart>=endLine))
+		{
+			windowStart = windowEnd = startLine;
+		}
 		// render the lines at the beginning you don't already have
 		for(int16_t l = startLine; l<windowStart; l++)
 		{
@@ -101,6 +112,12 @@ public:
 		windowEnd = endLine;
 		// set the pan register
 		v.bg0.setPanning( vec(xoffset(), (int)Sifteo::umod(windowOffset*8+scrollOffset+yoffset(), 144) ) );
+	}
+
+	void clearCache()
+	{
+		// mark everything as dirty
+		windowStart = windowEnd = 0;
 	}
 };
 
@@ -221,6 +238,8 @@ public:
 			if(cube != 2)
 			{
 				v.initMode(BG0_SPR_BG1, 16, 96);
+				scrollers[0].obj<ScrollingSelector>().clearCache();
+				scrollers[1].obj<ScrollingSelector>().clearCache();
 			}
 			else
 			{
@@ -263,7 +282,7 @@ public:
 			break;
 		case 3:
 			// a vertical scrolling level selector, takes some work
-			el.obj<ScrollingSelector>().draw(v);
+			el.obj<ScrollingSelector>().draw(v, scrollRegister->data16[0]);
 			break;
 		case 4:
 			// a sprite overlay, type, x, y, hidden
@@ -296,6 +315,10 @@ public:
 		{
 		case 0:
 			// the scroll register
+			el.data16[0] += fc * el.data16[1];
+			while(el.data16[0] >= scrollMax) el.data16[0] -= scrollMax;
+			while(el.data16[0] <= -scrollMax) el.data16[0] += scrollMax;
+			scrollers[0].repaint().next().repaint();
 			break;
 		case 1:
 			// text in a 16-pixel area
@@ -380,14 +403,16 @@ void main()
 
 	// mode 0 body mode 1 16 top mode 2 16 bottom mode 3 32 bottom
 	// put mode 0 entries first to do the asset download up front
-	// 0 scroll register
 	ChapterSelector cs;
 	LevelSelector ls;
 
-	Scene::createElement(0);
+	// 0 scroll register
+	scrollRegister = & (Scene::createElement(0).fullUpdate());
+	scrollRegister->data16[1] = 1;		// set scroll direction
+
 	// 3 level selector
-	Scene::createElement(3, 0).setObject(&cs);
-	Scene::createElement(3, 1).setObject(&ls);
+	void *scrollerObjects[] = {&cs, &ls};
+	scrollers = Scene::createElement(3, 0).fromTemplate(2, scrollerObjects);
 
 	// 4 sprite
 	setupSprite(Scene::createElement(4, 0), 0, 56, 0, 0);
