@@ -29,16 +29,27 @@ public:
 // how big an entry is in the window
 const int8_t windowSize = 12;
 const int16_t scrollMax = 96;
+const int16_t scrollHalf = scrollMax >> 1;
 // how many rows by default we try to buffer in both directions
 const int8_t bidiLookahead = 2;
 // how many rows we aim to buffer when scrolling
 const int8_t scrollLookback = 1;
 const int8_t scrollLookforward = 4;
 
-class ScrollingSelector
+class ScrollListener
+{
+public:
+	virtual void onBegin(Scene::Element &el, int16_t direction) = 0;
+	virtual void onUpdate(Scene::Element &el, int16_t position, int16_t direction) = 0;
+	virtual void onHalfway(Scene::Element &el, int16_t direction) = 0;
+	virtual void onComplete(Scene::Element &el, int16_t direction) = 0;
+};
+
+class ScrollingSelector : public ScrollListener
 {
 public:
 	int16_t windowOffset = 0;
+	int16_t baseOffset = 0;		// scrolling base offset
 
 	int8_t windowStart = 0;
 	int8_t windowEnd = 0;
@@ -69,6 +80,8 @@ public:
 
 	void draw(Sifteo::VideoBuffer &v, int16_t scrollOffset = 0)
 	{
+		scrollOffset += baseOffset;
+
 		//LOG("Drawing item with scroll offset %d\n", scrollOffset);
 		// calculate the first and last lines needed on the screen
 		int16_t startLine = (scrollOffset >> 3);	// rounded down
@@ -119,6 +132,46 @@ public:
 		// mark everything as dirty
 		windowStart = windowEnd = 0;
 	}
+
+	void onBegin(Scene::Element &el, int16_t direction)
+	{
+		baseOffset = 0;
+	}
+
+	void onUpdate(Scene::Element &el, int16_t position, int16_t direction)
+	{
+		el.repaint();
+	}
+
+	virtual uint16_t nextItem(uint16_t item) = 0;
+	virtual uint16_t prevItem(uint16_t item) = 0;
+
+	void onHalfway(Scene::Element &el, int16_t direction)
+	{
+		// once halfway, change the current image and the windowing parameters
+		if(direction==1)
+		{
+			itemBuffer[0] = itemBuffer[1];
+			itemBuffer[1] = itemBuffer[2];
+			itemBuffer[2] = nextItem(itemBuffer[2]);
+		}
+		else
+		{
+			itemBuffer[2] = itemBuffer[1];
+			itemBuffer[1] = itemBuffer[0];
+			itemBuffer[0] = prevItem(itemBuffer[0]);
+		}
+		// move the base address of the window down and the cached status in the opposite direction
+		windowOffset = Sifteo::umod(windowOffset + direction * windowSize, 18);
+		windowStart -= windowSize*direction;
+		windowEnd -= windowSize*direction;
+		baseOffset = -windowSize*8*direction;
+	}
+
+	void onComplete(Scene::Element &el, int16_t direction)
+	{
+		baseOffset = 0;
+	}
 };
 
 class ChapterSelector : public ScrollingSelector
@@ -135,6 +188,16 @@ class ChapterSelector : public ScrollingSelector
 		{
 			v.bg0.fill( vec(0U, bufferLine), vec(17U, 1U), Black);
 		}
+	}
+
+	virtual uint16_t nextItem(uint16_t item)
+	{
+		return 0x0000;
+	}
+
+	virtual uint16_t prevItem(uint16_t item)
+	{
+		return 0x0000;
 	}
 
 	virtual int xoffset()
@@ -178,6 +241,16 @@ class LevelSelector : public ScrollingSelector
 	virtual int yoffset()
 	{
 		return 4;
+	}
+
+	virtual uint16_t nextItem(uint16_t item)
+	{
+		return 0x0000;
+	}
+
+	virtual uint16_t prevItem(uint16_t item)
+	{
+		return 0x0000;
 	}
 };
 
@@ -282,7 +355,7 @@ public:
 			break;
 		case 3:
 			// a vertical scrolling level selector, takes some work
-			el.obj<ScrollingSelector>().draw(v, scrollRegister->data16[0]);
+			el.obj<ScrollingSelector>().draw(v, scrollRegister->sdata16[0] * scrollRegister->sdata16[1]);
 			break;
 		case 4:
 			// a sprite overlay, type, x, y, hidden
@@ -315,10 +388,30 @@ public:
 		{
 		case 0:
 			// the scroll register
-			el.data16[0] += fc * el.data16[1];
-			while(el.data16[0] >= scrollMax) el.data16[0] -= scrollMax;
-			while(el.data16[0] <= -scrollMax) el.data16[0] += scrollMax;
-			scrollers[0].repaint().next().repaint();
+			{
+				int16_t next = el.sdata16[0] + fc;
+				// whether to fire the halfway event
+				if((el.sdata16[0]<scrollHalf) && (next >= scrollHalf))
+				{
+					scrollers[0].obj<ScrollListener>().onHalfway(scrollers[0], el.sdata16[1]);
+					scrollers[1].obj<ScrollListener>().onHalfway(scrollers[1], el.sdata16[1]);
+				}
+				// whether to fire the completion event (and for the moment automatically start another)
+				if((el.sdata16[0]<scrollMax) && (next >= scrollMax))
+				{
+					scrollers[0].obj<ScrollListener>().onComplete(scrollers[0], el.sdata16[1]);
+					scrollers[1].obj<ScrollListener>().onComplete(scrollers[1], el.sdata16[1]);
+
+					next -= scrollMax;
+
+					scrollers[0].obj<ScrollListener>().onBegin(scrollers[0], el.sdata16[1]);
+					scrollers[1].obj<ScrollListener>().onBegin(scrollers[1], el.sdata16[1]);
+				}
+
+				el.sdata16[0] = next;
+				scrollers[0].obj<ScrollListener>().onUpdate(scrollers[0], el.sdata16[0], el.sdata16[1]);
+				scrollers[1].obj<ScrollListener>().onUpdate(scrollers[1], el.sdata16[0], el.sdata16[1]);
+			}
 			break;
 		case 1:
 			// text in a 16-pixel area
@@ -408,7 +501,7 @@ void main()
 
 	// 0 scroll register
 	scrollRegister = & (Scene::createElement(0).fullUpdate());
-	scrollRegister->data16[1] = 1;		// set scroll direction
+	scrollRegister->sdata16[1] = 1;		// set scroll direction
 
 	// 3 level selector
 	void *scrollerObjects[] = {&cs, &ls};
