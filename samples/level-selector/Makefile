@@ -2,6 +2,8 @@ APP = level-selector
 
 include $(SDK_DIR)/Makefile.defs
 
+ASSETDEPS = assets.lua
+
 SCENE = ../../scene
 SCENE_H = $(SCENE)/headers
 SCENE_C = $(SCENE)/src

@@ -24,8 +24,144 @@ public:
 	String<64> text;
 };
 
-class LevelSelector
+// how big an entry is in the window
+const int8_t windowSize = 12;
+// how many rows by default we try to buffer in both directions
+const int8_t bidiLookahead = 2;
+// how many rows we aim to buffer when scrolling
+const int8_t scrollLookback = 1;
+const int8_t scrollLookforward = 4;
+
+class ScrollingSelector
 {
+public:
+	int16_t windowOffset = 0;
+
+	int8_t windowStart = 0;
+	int8_t windowEnd = 0;
+
+	uint16_t previousItem = 0x0000;
+	uint16_t currentItem = 0x0000;
+	uint16_t nextItem = 0x0000;
+
+	virtual void doRender(Sifteo::VideoBuffer &v, uint32_t bufferLine, uint16_t item, uint32_t itemLine) = 0;
+	virtual int xoffset() = 0;
+	virtual int yoffset() = 0;
+
+	void renderLine(Sifteo::VideoBuffer &v, int16_t l)
+	{
+		int16_t bufferLine = Sifteo::umod(windowOffset + l, 18);
+		if(l<0)
+		{
+			doRender(v, bufferLine, previousItem, l+windowSize);
+		}
+		else if(l>=windowSize)
+		{
+			doRender(v, bufferLine, nextItem, l-windowSize);
+		}
+		else
+		{
+			doRender(v, bufferLine, currentItem, l);
+		}
+	}
+
+	void draw(Sifteo::VideoBuffer &v, int16_t scrollOffset = 0)
+	{
+		// calculate the first and last lines needed on the screen
+		int16_t startLine = (scrollOffset >> 3);	// rounded down
+		int16_t endLine = (scrollOffset + windowSize*8 +7) >> 3;
+		if(scrollOffset > 0)
+		{
+			// scrolling down
+			startLine -= scrollLookback;
+			endLine += scrollLookforward;
+		}
+		else if(scrollOffset < 0)
+		{
+			startLine -= scrollLookforward;
+			endLine += scrollLookback;
+		}
+		else
+		{
+			startLine -= bidiLookahead;
+			endLine += bidiLookahead;
+		}
+		// render the lines at the beginning you don't already have
+		for(int16_t l = startLine; l<windowStart; l++)
+		{
+			renderLine(v, l);
+		}
+		// render the lines at the end you don't already have
+		for(int16_t l=windowEnd; l<endLine; l++)
+		{
+			renderLine(v, l);
+		}
+		// remember what you've done
+		windowStart = startLine;
+		windowEnd = endLine;
+		// set the pan register
+		v.bg0.setPanning( vec(xoffset(), (int)Sifteo::umod(windowOffset*8+scrollOffset+yoffset(), 144) ) );
+	}
+};
+
+class ChapterSelector : public ScrollingSelector
+{
+	virtual void doRender(Sifteo::VideoBuffer &v, uint32_t bufferLine, uint16_t item, uint32_t itemLine)
+	{
+		if((itemLine>=4)||(itemLine<=8))
+		{
+			v.bg0.fill( vec(0U, bufferLine), vec(7U, 1U), Black);
+			v.bg0.image( vec(7U, bufferLine), vec(3,1), Digits, vec(0U, itemLine - 4), (item >> 8) & 0x00FF);
+			v.bg0.fill( vec(10U, bufferLine), vec(7U, 1U), Black);
+		}
+		else
+		{
+			v.bg0.fill( vec(0U, bufferLine), vec(17U, 1U), Black);
+		}
+	}
+
+	virtual int xoffset()
+	{
+		return 4;
+	}
+
+	virtual int yoffset()
+	{
+		return 4;
+	}
+};
+
+class LevelSelector : public ScrollingSelector
+{
+	virtual void doRender(Sifteo::VideoBuffer &v, uint32_t bufferLine, uint16_t item, uint32_t itemLine)
+	{
+		if((itemLine>=4)||(itemLine<=8))
+		{
+			// draw the digit indicated by item high byte (7 spaces before
+			// yes, I know I'm overdrawing here
+			v.bg0.fill( vec(0U, bufferLine), vec(3U, 1U), Black);
+			v.bg0.image( vec(3U, bufferLine), vec(3,1), Digits, vec(0U, itemLine - 4), (item >> 8) & 0x00FF);
+			v.bg0.fill( vec(6U, bufferLine), vec(1U, 1U), Black);
+			v.bg0.image( vec(7U, bufferLine), vec(3,1), Digits, vec(0U, itemLine - 4), 10); // dash
+			v.bg0.fill( vec(10U, bufferLine), vec(1U, 1U), Black);
+			v.bg0.image( vec(11U, bufferLine), vec(3,1), Digits, vec(0U, itemLine - 4), (item) & 0x00FF);
+			v.bg0.fill( vec(14U, bufferLine), vec(3U, 1U), Black);
+		}
+		else
+		{
+			v.bg0.fill( vec(0U, bufferLine), vec(17U, 1U), Black);
+		}
+	}
+
+	virtual int xoffset()
+	{
+		return 4;
+	}
+
+	virtual int yoffset()
+	{
+		return 4;
+	}
 };
 
 class Debounce
@@ -127,6 +263,7 @@ public:
 			break;
 		case 3:
 			// a vertical scrolling level selector, takes some work
+			el.obj<ScrollingSelector>().draw(v);
 			break;
 		case 4:
 			// a sprite overlay, type, x, y, hidden
@@ -244,10 +381,13 @@ void main()
 	// mode 0 body mode 1 16 top mode 2 16 bottom mode 3 32 bottom
 	// put mode 0 entries first to do the asset download up front
 	// 0 scroll register
+	ChapterSelector cs;
+	LevelSelector ls;
+
 	Scene::createElement(0);
 	// 3 level selector
-	Scene::createElement(3, 0);
-	Scene::createElement(3, 1);
+	Scene::createElement(3, 0).setObject(&cs);
+	Scene::createElement(3, 1).setObject(&ls);
 
 	// 4 sprite
 	setupSprite(Scene::createElement(4, 0), 0, 56, 0, 0);

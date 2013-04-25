@@ -2,8 +2,8 @@
 
 Scroller = group{quality=9.95}
 
-Digits = image{"digits2.png"}
-Black = image{"black-8x8.png"}
+Digits = image{"digits2.png", width=24, height=40}
+Black = image{"black-8x8.png", pinned=true}
 Up = image{"up.png", pinned=true}
 Down = image{"down.png", pinned=true}
 
