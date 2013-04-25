@@ -453,6 +453,13 @@ namespace Scene
 				if(assetLoader.isComplete(i))
 				{
 					SCENELOG("SCENE: Completed download to cube %d\n", i);
+					for(uint16_t i : initialDraw)
+					{
+						if(getElement(i).cube == logical)
+						{
+							redraw.mark(i);
+						}
+					}
 					fastDetach(i);
 					cubesLoading.clear(i);
 				}
@@ -469,6 +476,7 @@ namespace Scene
 			if(assetLoader.isComplete())
 			{
 				SCENELOG("SCENE: Completed download to all cubes\n");
+				redraw = initialDraw;
 				for(uint8_t i : cubesLoading)
 				{
 					fastDetach(i);
