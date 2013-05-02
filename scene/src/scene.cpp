@@ -775,6 +775,11 @@ namespace Scene
 		syncMode = sm;
 	}
 
+	uint16_t size()
+	{
+		return sceneSize;
+	}
+
 	Element &getElement(uint16_t index)
 	{
 		ASSERT(index < sceneSize);
