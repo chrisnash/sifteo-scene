@@ -35,7 +35,7 @@ namespace Font
 	void drawAt(VideoBuffer &v, UInt2 topLeft, const char *text)
 	{
 		uint16_t x = topLeft.x;
-		for(const char *p=text; *p; *p++)
+		for(const char *p=text; (*p!=0)&&(*p!='|'); *p++)
 		{
 			uint8_t w;
 			glyphAt(v, x, topLeft.y, *p, w);
@@ -46,10 +46,33 @@ namespace Font
 	void drawCentered(VideoBuffer &v, UInt2 topLeft, UInt2 size, const char *text)
 	{
 		uint16_t width = 0;
-		for(const char *p=text; *p; p++)
+		for(const char *p=text; (*p!=0)&&(*p!='|'); p++)
 		{
 			width += widthOf(*p);
 		}
 		drawAt(v, vec( topLeft.x + ((size.x-width)>>1), topLeft.y + ((size.y-fontHeight)>>1) ), text);
 	}
+
+	void drawCenteredMulti(VideoBuffer &v, UInt2 topLeft, UInt2 size, const char *text)
+	{
+		uint16_t parts = 1;
+		for(const char *p=text; *p; p++)
+		{
+			if(*p=='|') parts++;
+		}
+		uint16_t spare = size.y - parts*fontHeight;
+		const char *start = text;
+		for(uint16_t i=0; i<parts; i++)
+		{
+			uint16_t y = ((i+1)*spare)/(parts+1) + fontHeight*i;
+			drawCentered(v, vec(topLeft.x, topLeft.y+y), vec(size.x, (uint32_t)fontHeight), start);
+			// next segment
+			while((*start!=0)&&(*start!='|'))
+			{
+				start++;
+			}
+			if(*start) start++;
+		}
+	}
+
 }
